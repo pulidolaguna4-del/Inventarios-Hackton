@@ -1,0 +1,113 @@
+/* Estilos básicos: la prioridad es que sea funcional, no bonito. */
+
+:root {
+  --borde: #d0d4da;
+  --fondo-suave: #f4f6f8;
+  --texto-suave: #5f6b7a;
+  --acento: #1f6feb;
+  --alerta: #c62828;
+  --ok: #2e7d32;
+  --resaltado: #fff4ce;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 14px;
+  color: #1d2733;
+  background: #fff;
+}
+
+header {
+  padding: 12px 16px 0;
+  border-bottom: 1px solid var(--borde);
+  background: var(--fondo-suave);
+}
+
+h1 { margin: 0 0 10px; font-size: 20px; }
+h2 { margin: 24px 0 8px; font-size: 16px; }
+
+nav button {
+  border: 1px solid var(--borde);
+  border-bottom: none;
+  background: #e8ebef;
+  padding: 8px 14px;
+  margin-right: 4px;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  font-size: 14px;
+}
+
+nav button.activa { background: #fff; font-weight: 600; }
+
+main { padding: 8px 16px 40px; }
+
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  margin: 8px 0;
+}
+
+button {
+  padding: 6px 12px;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+button:hover { border-color: var(--acento); }
+button.principal { background: var(--acento); color: #fff; border-color: var(--acento); }
+
+input, select { padding: 4px 6px; font-size: 13px; border: 1px solid var(--borde); border-radius: 4px; }
+input[type="number"] { width: 90px; }
+
+.nota { color: var(--texto-suave); margin: 4px 0; }
+
+.tarjetas { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0; }
+
+.tarjeta {
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-width: 130px;
+  background: var(--fondo-suave);
+}
+
+.tarjeta .valor { font-size: 20px; font-weight: 600; }
+.tarjeta .etiqueta { color: var(--texto-suave); font-size: 12px; }
+
+.contenedor-tabla { overflow-x: auto; max-height: 520px; overflow-y: auto; border: 1px solid var(--borde); border-radius: 6px; }
+.contenedor-tabla:empty { border: none; }
+
+table { border-collapse: collapse; width: 100%; }
+th, td { padding: 5px 8px; border-bottom: 1px solid #eceef1; text-align: left; white-space: nowrap; }
+th { background: var(--fondo-suave); position: sticky; top: 0; z-index: 1; }
+td.numero { text-align: right; font-variant-numeric: tabular-nums; }
+
+tr.resaltada td { background: var(--resaltado); }
+tr.atenuada td { color: #9aa3ad; }
+.diferencia { color: var(--alerta); font-weight: 600; }
+.correcto { color: var(--ok); font-weight: 600; }
+
+.etiqueta-clase { display: inline-block; min-width: 20px; text-align: center; border-radius: 4px; font-weight: 600; }
+.clase-A { background: #d7f0da; }
+.clase-B { background: #fdeccb; }
+.clase-C { background: #eceef1; }
+
+#mensaje {
+  margin: 10px 16px 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #e7f3ff;
+  border: 1px solid #b6d4fe;
+}
+
+#mensaje.error { background: #fdecea; border-color: #f5c2c0; color: var(--alerta); }
+
+td input[type="number"] { width: 80px; }

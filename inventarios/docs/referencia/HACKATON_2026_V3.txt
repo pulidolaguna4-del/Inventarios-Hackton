@@ -1,0 +1,491 @@
+                   SERVICIO NACIONAL DE APRENDIZAJE-SENA
+ CENTRO DE GESTION DE MERCADOS, LOGISTICA Y TECNOLOGIAS DE LA INFORMACION
+                   FERIA LOGEX 2026- II HACKATON LOGISTICO
+
+Caso de Análisis: Optimización del Proceso de "Picking" y Conteo de Inventario
+
+El Problema
+Una pequeña empresa comercializadora de productos eléctricos y electrónicos opera con
+un almacén donde se realiza manualmente la preparación de pedidos (picking) y el conteo
+cíclico del inventario. La ineficiencia se debe a:
+
+   •   Trazado manual de recorrido picking: Los empleados reciben listas de papel para
+       picking sin orden lógico, lo que resulta en recorridos largos e innecesarios dentro
+       del almacén.
+   •   Errores de Inventario: El conteo cíclico (revisión periódica de existencias) se realiza
+       también en papel, lo que genera que algunas referencias no sean verificadas durante
+       el año.
+   •   Falta de Visibilidad: El gerente del almacén no tiene una visión clara y en tiempo
+       real de qué pedidos están siendo preparados o qué ubicaciones han sido contadas.
+
+Información importante:
+
+La empresa Distribuciones Centauros, ubicada en la ciudad de Villavicencio atiende
+especialmente el mercado de la zona oriental del país; se dedica a la compra y
+comercialización de productos eléctricos y electrónicos relacionados con el aire
+acondicionado, refrigeración, equipos de cómputo y de equipos de audio, lleva en el
+mercado relativamente poco tiempo, y para mejorar sus ingresos considera la necesidad de
+aumentar el portafolio de productos en 11 referencias de gran aceptación en otros países
+con mercados similares y donde se distribuyen a través de filiales de la compañía. El
+portafolio de la compañía para Colombia en la actualidad se encuentra conformado por un
+total de 197 referencias (49 de la categoría aire acondicionado, 60 de equipos de audio, 50
+de cómputo y 38 de la de refrigeración) y de los cuales encontrará datos adicionales en el
+archivo adjunto.
+
+En el año 2022 la empresa contaba con área de 1.698 m2 para 4.718 posiciones de
+almacenamiento para su funcionamiento en la ciudad de Villavicencio y en los satélites (i)
+Arauca 411 m2 para 1.225 posiciones de almacenamiento (ii) San José del Guaviare 407 m2,
+con 1.131 posiciones (iii) Yopal 430 m2, con 1.193 posiciones.
+Tabla 1. Relación de posiciones y área en m2 para el almacenamiento en las bodegas
+                       Ciudad          Pallets Totales    Área total m2
+                  Arauca                    1.225             441
+                  San José                  1.131             407
+                  Villavicencio             4.718            1.698
+                  Yopal                     1.193             430
+
+Dentro de su estructura interna, y específicamente en relación a su sistema logístico, este
+cuenta con los procesos de aprovisionamiento, distribución y retornos, apoyados por las
+actividades de:
+
+   •   Recibo de mercancías y devoluciones.
+   •   Gestión de inventarios.
+   •   Almacenamiento.
+   •   Preparación de pedidos.
+   •   Transporte.
+
+En cuanto a la red de suministro (Supply Chain), está conformada por distribuidores
+nacionales a los que la empresa les compra directamente los productos, los cuales a su vez
+negocian con los fabricantes a nivel internacional, dejando así la responsabilidad de los
+procesos de importación a los distribuidores.
+
+Para la distribución la empresa cuenta con un centro de distribución ubicado en la ciudad
+de Villavicencio, quien recibe de cada uno de los proveedores, la almacena y la envía a las
+bodegas satélites ubicadas en las ciudades de Yopal (satélite 1), San José del Guaviare
+(satélite 2), Arauca (satélite 3), quienes a su vez realizan la entrega de los productos a los
+clientes ubicados en los diferentes municipios del departamento para el caso de los
+departamentos de Guaviare, Arauca y Vichada.
+
+Uno de los factores iniciales en el análisis de la empresa es valorar la ubicación y definir los
+medios y modos de transporte a utilizar para efectuar la distribución de los productos a los
+diferentes clientes, teniendo en cuenta que los volúmenes a manejar por la empresa no
+sobrepasan las 300 canastillas semanales, para los despachos desde Villavicencio hacia los
+clientes, y de los satélites a los clientes. Y de 890 canastillas entre el CEDI de Villavicencio y
+los satélites.
+
+La unidad de almacenamiento y de packing se ha definido como la canastilla, ya que el
+tamaño de los productos manejados en el catálogo es pequeño. Las canastillas definidas
+para los despachos son del tipo de medicamentos con dimensiones de 60 cm x 40 cm x 50
+cm, dentro de las cuales se pueden ubicar en promedio un total de 20 referencias por cada
+una, con un peso promedio de 15 Kg cada una.
+Grafica 1. Estructura de la red de suministros de la Empresa
+                                                                                      C1
+
+                                                                                      C2
+                                      D1                            S1
+                                                                                      C3
+
+                                      D2
+                                                                    S2                C1
+
+                                                                                      C2
+                                      D3
+                      FABRICAS                                      S3                C3
+
+                                                                                      C1
+                                      D4
+                                                                                      C2
+
+                                      D5                                              C3
+
+
+                                                                                      C1
+                                      D6
+                                                                                      C2
+
+                                                                                      C3
+
+
+
+
+                   Fabricantes Distribuidores   Centauros       Satélites       Clientes finales
+
+
+
+Por otro lado, en relación al almacenamiento de los productos en el CEDI de Villavicencio
+como en los satélites, se determinó por parte de la dirección logística que la unidad de
+almacenamiento debería ser el pallet americano con dimensiones de 1 m de ancho, 1.2 m
+de largo, y de 0.15 m de alto.
+
+Sobre estos pallets se ubican las cajas de cartón corrugado en los que vienen embalados los
+productos, las dimensiones de estas permiten que en promedio puedan ser colocadas un
+total de 15 unidades por cada pallet.
+
+Grafica 2. Pallet utilizado en la operación logística
+
+
+                                                                            0,15 m
+
+
+
+
+                            1,0m                            1,2 m
+
+
+
+
+La altura de la mercancía sobre el pallet no debe sobrepasar los 1,5 m, de manera que se
+respete lo establecido por seguridad en el trabajo, estos pallets son colocados en
+estanterías tipo porta pallet, con una altura a la última viga de 6 m, de largo cada viga tiene
+2,4 m y la profundidad de esta es de 1 m.
+Grafica 3. Dimensiones de la estantería utilizada para el almacenamiento.
+                                                              6m
+
+
+
+
+                               1,0 m
+
+                                              2,4 m
+
+Grafica 4. Canastillas utilizadas para el despacho de los pedidos
+
+
+
+
+El despacho promedio de canastillas de cada ciudad se muestra en la siguiente tabla
+
+Tabla 2. Despacho promedio de canastillas para cada ciudad.
+                                CANASTILLAS x        VALOR DESPACHOS
+                   CIUDAD
+                                  SEMANA               ULTIMO AÑO ($)
+              Arauca                  302               $ 101.011.811
+              San José                284                $ 91.196.599
+              Villavo Clientes        288                $ 93.577.233
+              Villavo Satélites       887               $ 284.245.388
+              Yopal                   301                $ 92.036.978
+
+Para el siguiente año la empresa espera aumentar sus ventas en un 30%, lo que en términos
+monetarios llevarían las ventas a $860.688.412 total año
+Tabla 3. Valorizado del inventario por categoría de productos del inventario
+                                                 VALOR PROMEDIO DEL
+                       CATEGORÍA
+                                              INVENTARIO ULTIMO AÑO
+               Aire acondicionado                    $ 262.026.131
+               Refrigeración                         $ 125.526.645
+               Equipos de cómputo                    $ 162.415.280
+               Equipos de audio                      $ 233.155.141
+               Valor inventario promedio             $ 783.123.197
+
+De acuerdo a la historia de la empresa, en años anteriores se había planeado un escenario
+igual de incremento en la ventas, pero en esa ocasión no se realizó un adecuado control de
+los niveles de inventario, lo cual ocasiono que se presentaran perdidas de productos debido
+a la obsolescencia de los productos, con su respectiva merma del dinero (aproximadamente
+un 8% del valor total del inventario), lo cual llevo a la empresa a tomar medidas tendientes
+a disminuir sus niveles de inventario, con la restricción de no afectar el nivel servicio al
+cliente, estableciendo como política para el control de los mismos, que los días de inventario
+fueran como máximo 20 días en promedio para cada una de las categorías.
+
+En relación con los costos logísticos, al ser evaluados al inicio del trabajo, estos arrojaron el
+siguiente resultado:
+
+Grafica 5. Participación porcentual de los costos logísticos de la empresa.
+                                        Participación % Costo Logístico
+
+                                                                          Aprovisionamiento;
+                    Distribución; 20%
+                                                                                 25%
+
+
+
+
+                                                                                  Almacenamiento;
+              Inventarios; 40%
+                                                                                       15%
+
+
+
+
+Y el porcentaje de los costos logísticos como porcentaje de las ventas ascendían a un 20%
+
+En relación a los costos del transporte, se recolecto la información de los últimos enviados
+realizados a los diferentes destinos y se estableció que el valor pago por cada tonelada
+kilometro transportada desde Villavicencio a los satélites, y de los satélites a los clientes
+finales fue de: $686 para Yopal, $571 para Arauca y $689 para San José del Guaviare. Para
+las entregas de última milla en Villavicencio el valor del flete de estimo en $648 por tonelada
+kilometro transportada.
+
+Los costos de almacenamiento pagos por m2 asciende a $22.000/m2 para Villavicencio,
+$20.000 para Yopal, $12.000 para San José y $10.000 para Arauca.
+
+A fin de poder efectuar un comparativo del desempeño de la empresa contra la
+competencia y el entorno, se utilizó la herramienta de “Análisis del Entorno”, obteniendo
+como resultado, que la estrategia logística de la empresa debería girar sobre dos enfoques:
+
+   •   Un enfoque basado en la velocidad de respuesta, que permita cumplir con las
+       entregas de los pedidos de los clientes de una manera más ágil, ya que la
+       competencia presenta una deficiencia marcada en este aspecto.
+   •   Un enfoque basado en el cuidado de la rentabilidad, determinado por la Gerencia
+       de la empresa, ya que disminuir los costos logísticos es una prioridad dentro de los
+       objetivos estratégicos trazados para ser alcanzados en el corto plazo.
+
+En relación a la estrategia de mercadeo, y gracias a la información obtenida en el estudio
+de análisis del entorno, se determinó que a fin de poder tener un mayor cubrimiento del
+mercado se debería adoptar el proceso de venta mediante la utilización medios
+electrónicos, conocido como e commerce.
+
+En este sentido para determinar la estrategia de distribución. La red de transporte y los
+medios y modos de transporte, se recolecta la siguiente información relacionada con la
+ubicación geográfica de los municipios, la malla vial y la red de infraestructura disponible
+para poder hacer el transporte.
+Grafica 6. División político administrativa departamentos de la red de distribución comercial
+
+
+
+
+      Villavicencio
+
+
+
+
+                               Villavicencio
+Villavicencio
+
+
+
+
+                Las Damas
+La otra información recabada se centra en poder establecer las principales vías terrestre
+por las cuales se puede realizar el transporte de la mercancía desde el centro de distribución
+ubicado en la ciudad de Villavicencio a los diferentes, como la infraestructura de las
+terminales aérea que podría ser utilizadas para la distribución física de los productos.
+
+Grafica 7. Infraestructura logística por cada departamento de la red de distribución
+comercial
+Los Datos (Recursos Básicos Disponibles)
+
+Los equipos trabajarán con un conjunto de datos simulado y simplificado para representar
+el estado del almacén.
+
+   •   Maestro de Inventario (CSV/EXE):
+           o SKU (Identificador del producto, ej: 100001)
+           o Ubicación (Coordenada simple de la estantería, ej: A1-03, B2-15 y/o la
+               numeración consecutiva de las posiciones)
+   •   Órdenes de Pedido (CSV/EXE):
+           o ID Pedido
+           o SKU
+           o Cantidad Requerida
+   •   Lista de Ubicaciones para Conteo Cíclico (CSV/EXE):
+           o Ubicación
+El Desafío de Software Básico
+Los equipos deben desarrollar una solución que aborde, al menos, el objetivo mínimo y, si
+es posible, uno o más de los objetivos avanzados, utilizando programación fundamental
+(ej. Python, JavaScript, etc.).
+
+Desarrollar una herramienta o algoritmo de software básico que realice dos funciones
+clave:
+    1. Optimización de Tareas de Picking: Recibir un lote de órdenes de pedido y generar
+       una lista de picking consolidada y ordenada. Esta lista debe minimizar la distancia
+       o el tiempo de recorrido del operario, agrupando los SKUs por su ubicación física en
+       una secuencia lógica (ej. de A1 a A5, luego de B1 a B5).
+
+   2. Sistema de Conteo Cíclico: Generar una lista priorizada de referencias que necesitan
+      ser contadas, basándose en la planeación realizada para efectuar los conteos cíclicos
+      que debe garantizar por lo menos que todas las referencias deben ser inventariadas
+      como mínimo cinco veces al año.
+
+ENTREGABLE SESIÓN 1
+
+Análisis y proyección de la demanda
+
+Se requiere el análisis detallado de cada una de las 11 referencias que ingresan al portafolio
+de la compañía y las proyecciones de demanda que sugieren el menor error para el proceso
+de planificación.
+
+Políticas de Inventario
+
+Al estimar los pronósticos y errores de cada una de las referencias requeridas, le solicitan la
+definición de política de inventarios para los 11 productos a partir de las orientaciones
+propuestas en el caso, la variabilidad de la demanda y un nivel de servicio requerido del
+90%.
+
+ENTREGABLE SESIÓN 2
+
+Análisis de operaciones de almacén
+
+Como parte de sus procesos de mejora, la Gerencia ha iniciado un proceso de aplicación de
+tecnologías 4.0 a fin de poder reducir los costos operativos especialmente en las
+operaciones de la bodega. Para esto se contrató un grupo de asesores para que diseñen un
+código de programación para un sistema de información que sea capaz de definir cuál
+debería ser el orden de recogida de los pedidos de los clientes, bajo la premisa de que esta
+responda a la menor distancia recorrida.
+Para esto desde el área de logística se decidió que para la implementación de este proyecto
+se iniciara con un piloto en la bodega satélite de Arauca, por lo tanto el primer paso a
+realizar es el de realizar la asignación de ubicaciones de cada referencia atendiendo el
+principio de popularidad, para lo cual es necesario que marque en el layout propuesto la
+ubicación diferentes categorías y de las referencias que ingresaran al portafolio de la
+compañía, teniendo en cuenta que el picking será realizado a nivel de suelo y los auxiliares
+podrán acceder a los lados del pasillo indiscriminadamente.
+
+Para el análisis de las operaciones en el almacén en la determinación de la ubicación de las
+referencias dentro de la estantería se propone que el método de almacenamiento definido
+sea el aleatorio, donde los productos pueden tener más de una posición, lo cual conlleva a
+que se defina un sistema de codificación de estas, que permitan la administración de las
+mismas por medio de un WMS (Warehouse Management System).
+
+En virtud de lo anterior cada grupo de trabajo deberá definir un sistema de codificación de
+ubicaciones que permita identificar cada una de ellas a fin de poder controlar el
+almacenamiento y el despacho de la mercancía.
+
+Grafica 8. Layout de la bodega satélite de Arauca.
+
+
+                                                                       2m
+                                                                       2,4m
+                           18       17   19   20   52        51   53
+
+
+                           16       15   22   21   50        49   54
+
+
+                           14       13   23   22   48        47   55
+
+
+                           12       11   25   24   46        45   56
+
+
+                           10       9    27   26   44        43   57
+
+
+                           8        7    29   28   42        41   58
+
+
+                           6        5    31   30   40        39   59
+
+
+                           4        3    33   32   38        37   60
+
+
+                           1        2    35   34   35        36   61
+
+
+
+                                                        1m   2,1m
+                                                                       5m
+
+
+
+
+                           SALIDA                            SALIDA
+
+
+
+Ahora, una vez definidas la codificación para las ubicaciones, tomando como base el
+siguiente layout donde los racks marcados con naranja se debe seleccionar producto en dos
+niveles (primero y segundo), en rojo la ubicación del producto a recoger está en un segundo
+nivel, y amarillo representan las referencias que están en el primer nivel, utilizando la
+herramienta o algoritmo de software básico diseñado, deberán elaborar una lista de
+despacho que optimice el tiempo utilizado para realizar el picking, teniendo en cuenta que
+por restricciones de capacidad el equipo solo puede visitar tres ubicaciones cada vez (tenga
+en cuenta que el tiempo de la recogida del producto en el segundo nivel es el triple del
+tiempo de recogida en un primer nivel).
+
+Grafica 9: Esquema del layout para realizar el picking de un pedido.
+
+                                18       17   19   20   52   51   53
+
+
+                                16       15   22   21   50   49   54
+
+
+                                14       13   23   22   48   47   55
+
+
+                                12       11   25   24   46   45   56
+
+
+                                10       9    27   26   44   43   57
+
+
+                                 8       7    29   28   42   41   58
+
+
+                                 6       5    31   30   40   39   59
+
+
+                                 4       3    33   32   38   37   60
+
+
+                                 1       2    35   34   35   36   61
+
+
+
+
+                                SALIDA                       SALIDA
+
+
+
+Por último, de acuerdo al maestro de productos entregados, a las políticas de control de
+inventarios en relación a los conteos cíclicos y al aplicativo desarrollado para el sistema de
+inventarios periódicos, se debe generar un listado de las referencias que deberían ser objeto
+de análisis.
+
+Plan de distribución
+
+Dentro del plan de crecimiento la empresa ha decidido ingresar 11 nuevas referencias a su
+catálogo de ventas, lo cual aumentara la operación logística para poder atender las
+demandas de los diferentes clientes, por lo cual el Gerente le ha solicitado al equipo que
+calcule un estimativo de en cuanto se incrementaría el costo de la distribución y del
+almacenamiento a fin de poder realizar una proyección de las ganancias netas de la empresa
+con la introducción de los nuevos productos.
+Criterios de Evaluación
+ Criterio                 Descripción                                        Ponderación
+
+ Planificación    de      Proyección de demanda para cada referencia
+ demanda.                 (Errores).
+                                                                                10%
+                          Definición de políticas de inventario para cada
+                          referencia y SS requerido.
+
+ Logística        de      Ubicación de referencias según criterios de
+                                                                                15%
+ almacén.                 eficiencia (ABC).
+
+ Plan              de     Determinar las posibles alternativas de ruta
+ distribución             que permitan establecer las distancias a
+                          recorrer, a fin de poder calcular cual sería el
+                          costo del transporte, tomando como base para          15%
+                          esto el valor pagado por Tonelada/kilómetro
+                          que se estima $648 en promedio para los tres
+                          satélites.
+
+ Lógica           de      Eficacia del algoritmo para secuenciar las
+                                                                                15%
+ Optimización             ubicaciones de picking y priorizar el conteo.
+
+ Lógica del Conteo        Selección de los ítems es aleatoria, y cumple
+                                                                                10%
+ Cíclico                  con el número de conteos al año.
+
+ Diseño y Estructura      Código legible, uso de funciones claras y
+ del Código               manejo correcto de los datos de                       10%
+                          entrada/salida.
+
+
+ Uso de tecnologías       Utilización de la tecnología básica (ej. Python,
+ básica                   JS) de manera eficiente, demostrando dominio          15%
+                          de las estructuras fundamentales.
+
+
+ Presentación       y     Explicación clara del problema y la solución,
+ Claridad                 demostrando el impacto.                                5%
+
+
+ Programación     y       El robot ejecuta la trayectoria de manera
+ desplazamiento del       autónoma y exacta de principio a fin,
+                                                                                 5%
+ robot Arduino            respetando fielmente todas las instrucciones
+                          asignadas
+Este caso permite a los participantes aplicar conceptos básicos de algoritmia de
+ordenamiento y gestión de datos para resolver problemas tangibles de eficiencia de
+almacén.
+

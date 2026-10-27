@@ -1,0 +1,292 @@
+Hackathon Logístico
+
+Caso de análisis: Optimización del proceso de picking y conteo de inventarios.
+
+Introducción a la documentación del proyecto de prueba. 
+
+  Descripción:
+
+  El caso de análisis consta de varios documentos como se describe a
+  continuación:
+
+-   Descripción completa de la prueba, documento Caso de Análisis:
+    Optimización del Proceso de "Picking" y Conteo de Inventario.
+
+-   Data con la información histórica de las ventas de la empresa, y
+    base de datos con la información de los nuevos productos a incluir
+    en el inventario.
+
+-   Mapas de división política y de las principales rutas de transporte
+    para cada uno de los departamentos donde la empresa tiene operación.
+
+  El esquema de calificación por temáticas relacionadas con el negocio
+  para el desempeño de los Competidores. Los requisitos estándar
+  relacionados con la logística son: planificación de la demanda,
+  logística del almacén, plan de distribución y planificación del
+  inventario cíclico. Los requisitos relacionados con el desarrollo de
+  software son: lógica en la programación para determinar la lista de
+  despacho, lógica en la selección de los ítems seleccionados para
+  efectuar el conteo en los inventarios cíclicos, claridad y legibilidad
+  del código de programación y el uso de tecnologías básicas.
+
+  El caso de análisis presentado durante el concurso es una fiel
+  imitación de las actividades de una pequeña empresa comercializadora
+  de productos eléctricos y electrónicos que opera con un almacén donde
+  se realiza manualmente la preparación de pedidos (picking) y el conteo
+  cíclico del inventario.
+
+Instrucciones al competidor
+
+Horarios de almuerzo y descanso
+
+Los horarios de descanso se dan diariamente en:
+
+-   El primer descanso se anuncia por la mañana.
+
+-   Segundo descanso: se anunciará en horas de la tarde cuando exista
+    dicha sesión.
+
+Reglas generales de la Competición
+
+El caso de estudio que se le entregará es muy cercano al entorno de
+trabajo real de una pequeña empresa comercializadora de productos
+eléctricos y electrónicos ubicada en la ciudad de Villavicencio atiende
+especialmente el mercado de la zona oriental del país; se dedica a la
+compra y comercialización de productos eléctricos y electrónicos
+relacionados con el aire acondicionado, refrigeración, equipos de
+cómputo y de equipos de audio
+
+Las reglas principales son:
+
+-   No tendrá ninguna orientación sobre qué hacer primero y qué hacer a
+    continuación. Se deben desarrollar una serie de tareas desde la
+    primera sesión, Recibirá sus tareas por la mañana todos los días de
+    la competencia.
+
+-   Existe una carpeta con “toda la información posible” para utilizar.
+    En su escritorio encontrará varios documentos que podrá utilizar en
+    el transcurso de la competencia.
+
+-   Todas las solicitudes serán recibidas por medio de una carpeta que
+    deberá ser creada en Google Drive, para cada ejercicio, con la
+    estructura:
+
+    Día (número de día) _Ejercicio (número de ejercicio)
+
+    En ella ubicara las tablas de Excel, documentos de Word, PPT, etc.;
+    Cuyo nombre también debe tener la estructura anterior. Si no sigue
+    esta estructura para marcar los archivos no se tendrán en cuenta
+    para la evaluación. Se recomienda que, aunque no se pida un archivo
+    determinado en Excel, si el ejercicio requiere cálculos que se
+    desarrollen en dicho software y se marquen correctamente.
+
+    1.  Reglas de tu empresa
+
+-   En un “Análisis del Entorno”, se estableció, que la estrategia
+    logística de la empresa debería girar sobre dos enfoques: un enfoque
+    basado en la velocidad de respuesta, un enfoque basado en el cuidado
+    de la rentabilidad
+
+-   La estrategia de mercadeo establece que a fin de poder tener un
+    mayor cubrimiento del mercado se debería adoptar el proceso de venta
+    mediante la utilización medios electrónicos, conocido como e
+    commerce.
+
+-   Se les suministra la información relacionada con la ubicación
+    geográfica de los municipios, la malla vial y la red de
+    infraestructura disponible para poder determinar la red de
+    distribución.
+
+    Todo Supervisor logístico debe:
+
+-   Planear el recibo de mercancía.
+
+-   Gestionar los inventarios de una empresa.
+
+-   Diseñar el sistema de almacenamiento para una empresa.
+
+-   Asignar los pedidos a ser alistados en una jornada de trabajo.
+
+-   Determinar la ruta del picking en una bodega.
+
+-   Planear las rutas de acuerdo a la red de distribución de la empresa.
+
+-   Estructural un plan de inventarios cíclicos como herramienta para el
+    control de los inventarios.
+
+-   Calcular la cantidad de recursos necesarios para la operación
+    logística (recipientes para el envío de productos, espacio en la
+    bodega, cantidad de medios de transporte requeridos, cantidad de
+    recurso humano necesario para la operación, entre otros.
+
+-   Calcular los costos asociados a la operación logística.
+
+Restricciones
+
+-   NO se le permite utilizar cualquier otro tipo de software diferente
+    al instalado en el equipo.
+
+Si se infringe esta regla, el Competidor quedará fuera de la Competición
+y no se le permitirá continuar con la Competencia.
+
+DÍA 1.
+
+Módulo: Análisis y proyección de la demanda.
+
+Módulo: Construcción y pruebas de funcionalidad de Arduino
+(Teleinformática)
+
+En este módulo, el competidor debe realizar el análisis detallado de
+cada una de las 11 referencias que ingresan al portafolio de la compañía
+y las proyecciones de demanda que sugieren el menor error para el
+proceso de planificación.
+
+Tarea 0: Logística
+
+1.  Su gerente le solicita estimar los pronósticos y errores de cada una
+    de las referencias requeridas.
+
+2.  Le solicitan la definición de política de inventarios para los 11
+    productos a partir de las orientaciones propuestas en el caso, la
+    variabilidad de la demanda y un nivel de servicio requerido del 90%.
+
+Evaluación tarea 0 logística:
+
+Se calificará la selección de la técnica de proyección de la demanda
+para cada referencia indicada, es importante aplicar por lo menos dos
+técnicas y a partir del error de pronóstico justificar la elección de la
+proyección.
+
+-   Data para poder realizar el análisis y pronóstico de la demanda.
+
+Tarea 0 Teleinformática:
+
+A partir de los componentes entregados el equipo de teleinformática
+deberá realizar el ensamblaje y prueba de la funcionalidad del equipo
+con una programación básica de desplazamiento.
+
+Evaluación tarea 0 Teleinformática:
+
+-   Operatividad del robot Arduino.
+
+-   Seguimiento de ordenes de acuerdo al código.
+
+DÍA 2.
+
+Módulo: Análisis de operaciones del almacén (Logística).
+
+Como parte de sus procesos de mejora, la Gerencia ha iniciado un proceso
+de aplicación de tecnologías 4.0 a fin de poder reducir los costos
+operativos especialmente en las operaciones de la bodega. Para esto se
+contrató un grupo de asesores para que diseñen un código de programación
+para un sistema de información que sea capaz de definir cuál debería ser
+el orden de recogida de los pedidos de los clientes, bajo la premisa de
+que esta responda a la menor distancia recorrida.
+
+Tarea 1:
+
+Para esto desde el área de logística se decidió que para la
+implementación de este proyecto se iniciara con un piloto en la bodega
+satélite de Arauca, por lo tanto el primer paso a realizar es el de
+realizar la asignación de ubicaciones de cada referencia atendiendo el
+principio de popularidad, para lo cual es necesario que marque en el
+layout propuesto la ubicación diferentes categorías.
+
+Tarea 2:
+
+Una vez realizado el análisis de las operaciones en la bodega piloto,
+deben definir el método de almacenamiento a utilizar, teniendo en cuenta
+todas las características de los productos y los requerimientos de los
+clientes.
+
+Tarea 3
+
+Cada equipo de trabajo deberá definir un sistema de codificación de
+ubicaciones que permita identificar cada una de ellas a fin de poder
+controlar el almacenamiento y el despacho de la mercancía.
+
+Tarea 4:
+
+El Gerente le ha solicitado al equipo de logística que calcule un
+estimativo de en cuanto se incrementaría el costo del almacenamiento a
+fin de poder realizar una proyección de las ganancias netas de la
+empresa con la introducción de los 11 nuevos productos.
+
+Evaluación tareas 1, 2, 3 y 4:
+
+Se evaluaran aspectos relacionados con: la propuesta de layout para la
+bodega satelite incluyendo la 11 nuevas referencias, el sistema de
+codificación propuesto para la disposición de la mercancia en los
+espacios de almacenamiento y el calculo de la proyección del incremento
+de los costos de almacenamiento tras la inclusión dels 11 nuevas
+referencias al catalogo de venta.
+
+DÍA 2 y 3 (Taller abierto).
+
+Módulo: Habilidades de programación de herramientas o algoritmo de
+software básico. (Logística – Teleinformática)
+
+Tarea 5:
+
+La gerencia desea realizar un rediseño de la red de distribución actual,
+por lo cual les envía un correo solicitando que realicen un análisis a
+fin de proponer mejores alternativas de rutas para realizar los envíos
+de la mercancía desde el almacén central ubicado en la ciudad de
+Villavicencio hacia los satélites de la empresa.
+
+Evaluación tarea 5:
+
+Determinación de la mejor ruta hacia cada satélite a partir de los
+costos de distribución y condiciones de transporte a cada lugar que
+afecten la operación.
+
+Tarea 6.
+
+Tomando como base el siguiente layout donde los racks marcados con
+naranja se debe seleccionar producto en dos niveles (primero y segundo),
+en rojo la ubicación del producto a recoger está en un segundo nivel, y
+amarillo representan las referencias que están en el primer nivel,
+utilizando la herramienta o algoritmo de software básico diseñado,
+deberán elaborar una lista de despacho que optimice el tiempo utilizado
+para realizar el picking
+
+[]
+
+Evaluación tarea 6:
+
+El criterio de evaluación será la comprobación de como el algoritmo
+ordena eficientemente los SKUs minimizando el recorrido (ej. por
+cuadrante y luego por pasillo), y si el código es limpio, bien comentado
+y sigue convenciones de nombrado que facilitan su lectura.
+
+Tarea 7:
+
+Una vez definido el código de programación para efectuar la lista de
+despacho, esta deberá ser programada en el robot Arduino suministrado a
+cada equipo, para que este realice el recorrido de alistamiento en el
+plano de la maqueta.
+
+Evaluación tarea 7:
+
+Los criterios de evaluación de esta prueba serán: el robot realiza
+movimientos correctos y recorre las distancias exactas solicitadas, el
+robot completa el recorrido de forma fluida, sin pausas innecesarias o
+movimientos erráticos, el código utiliza correctamente los tiempos de
+espera.
+
+Tarea 8.
+
+Una vez incluidas las nuevas referencia tanto en el catálogo de
+productos como en la disposición de los productos en el almacén de la
+bodega satélite del piloto solicitado por el gerente, deberán realizar
+el diseño del plan de conteos cíclicos para el total de referencia del
+inventario, de forma que este sea la base para que conjuntamente con el
+grupo asesor de sistemas estructuren la programación de un código que
+permita la selección de las referencias semanales que deben ser
+inventariadas, que permitan que por lo menos cada ítem se inventariado 5
+veces en el año.
+
+Evaluación tarea 8:
+
+La selección de los ítems se realiza completamente de manera aleatoria,
+y cumple con el número de conteos al año.

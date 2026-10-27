@@ -1,0 +1,24 @@
+# Dependencias y compilados del frontend (static/ del backend SÍ se sube: es lo que se presenta)
+node_modules/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+
+# Temporales de escritura atómica
+*.tmp
+
+# Datos que genera el sistema al usarse (se recrean solos)
+inventarios/datos/*.json
+inventarios/salidas/*.csv
+!inventarios/salidas/.gitkeep
+
+# Copia comprimida del proyecto (ya está descomprimido en inventarios/)
+Documentacion/inventarios.zip
+
+# Editor / sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

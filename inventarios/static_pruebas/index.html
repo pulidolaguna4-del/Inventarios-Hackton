@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inventarios Arauca</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <header>
+    <h1>Inventarios — Bodega Arauca</h1>
+    <nav id="pestanas">
+      <button data-pestana="datos" class="activa">Datos</button>
+      <button data-pestana="conteo">Conteo cíclico</button>
+      <button data-pestana="pedidos">Pedidos</button>
+      <button data-pestana="picking">Picking (informativo)</button>
+    </nav>
+  </header>
+
+  <div id="mensaje" hidden></div>
+
+  <main>
+    <!-- DATOS -->
+    <section id="seccion-datos" class="seccion">
+      <h2>Resumen</h2>
+      <div id="resumen" class="tarjetas"></div>
+
+      <h2>Maestro de ubicaciones</h2>
+      <div class="barra">
+        <label>Clase
+          <select id="filtro-clase">
+            <option value="">Todas</option>
+            <option>A</option><option>B</option><option>C</option>
+          </select>
+        </label>
+        <label>Buscar <input id="buscar-maestro" placeholder="SKU o descripción"></label>
+        <button id="boton-generar-maestro">Recalcular maestro</button>
+        <button data-exportar="maestro" data-nombre="Día2_Ejercicio1">Exportar CSV</button>
+      </div>
+      <p id="info-maestro" class="nota"></p>
+      <div id="tabla-maestro" class="contenedor-tabla"></div>
+    </section>
+
+    <!-- CONTEO -->
+    <section id="seccion-conteo" class="seccion" hidden>
+      <div id="resumen-conteo" class="tarjetas"></div>
+      <p id="verificacion-plan" class="nota"></p>
+
+      <h2>Lista de la semana</h2>
+      <div class="barra">
+        <label>Semana <input id="numero-semana" type="number" min="1" max="52" value="1"></label>
+        <button id="boton-ver-semana">Ver</button>
+        <label>Responsable <input id="responsable" placeholder="Nombre de quien cuenta"></label>
+        <button id="boton-exportar-semana">Exportar semana CSV</button>
+      </div>
+      <p class="nota">Si la cantidad del sistema se deja vacía se usa el stock simulado (el valor gris).</p>
+      <div id="tabla-semana" class="contenedor-tabla"></div>
+
+      <h2>Progreso anual por referencia</h2>
+      <div class="barra">
+        <label><input id="ocultar-completas" type="checkbox"> Ocultar las que ya salieron de la lista (5/5)</label>
+        <button data-exportar="conteo" data-nombre="Día2_Ejercicio8">Exportar plan anual CSV</button>
+        <button data-exportar="registros_conteo" data-nombre="registros_conteo">Exportar registros CSV</button>
+      </div>
+      <div id="tabla-progreso" class="contenedor-tabla"></div>
+
+      <h2>Regenerar plan</h2>
+      <div class="barra">
+        <label>Semilla <input id="semilla" type="number" value="2026"></label>
+        <button id="boton-regenerar-plan">Regenerar plan anual</button>
+      </div>
+      <p class="nota">Con la misma semilla siempre sale el mismo plan. Si ya hay conteos registrados, se respaldan antes de empezar de cero.</p>
+    </section>
+
+    <!-- PEDIDOS -->
+    <section id="seccion-pedidos" class="seccion" hidden>
+      <div class="barra">
+        <label>Fecha <select id="fecha-pedidos"></select></label>
+        <label>Estado
+          <select id="filtro-estado"><option value="">Todos</option></select>
+        </label>
+        <button id="boton-exportar-pedidos">Exportar CSV</button>
+      </div>
+      <div id="conteo-estados" class="tarjetas"></div>
+      <div id="tabla-pedidos" class="contenedor-tabla"></div>
+    </section>
+
+    <!-- PICKING -->
+    <section id="seccion-picking" class="seccion" hidden>
+      <p class="nota">
+        La optimización de recorridos está pospuesta. Aquí solo se muestra, como dato informativo,
+        cuánto tarda cada trayecto del pedido de la Tarea 6 y cuál es el más demorado.
+      </p>
+      <div id="totales-picking" class="tarjetas"></div>
+      <div id="tabla-recorridos" class="contenedor-tabla"></div>
+      <div class="barra">
+        <button data-exportar="picking" data-nombre="Día2_Ejercicio6">Exportar lista de despacho CSV</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
