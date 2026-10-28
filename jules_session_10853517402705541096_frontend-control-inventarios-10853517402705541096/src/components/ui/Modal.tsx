@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -42,10 +43,13 @@ export const Modal: React.FC<ModalProps> = ({
     '2xl': 'max-w-2xl',
   };
 
-  return (
+  // Se monta en <body> con un portal: si un ancestro tiene transform (por ejemplo la
+  // animación de entrada de <main>), position: fixed se mediría contra ese ancestro
+  // y el modal quedaría fuera de la vista.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className={`bg-white rounded-2xl shadow-xl w-full ${maxWidthClasses[maxWidth]} overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]`}
+        className={`bg-white rounded-2xl shadow-xl w-full ${maxWidthClasses[maxWidth]} overflow-y-auto border border-slate-100 flex flex-col max-h-[90vh]`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
@@ -64,6 +68,7 @@ export const Modal: React.FC<ModalProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };

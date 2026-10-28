@@ -1,7 +1,123 @@
 @import "tailwindcss";
 
+/* Fuentes incluidas en el proyecto (funcionan sin internet). */
+@import "@fontsource-variable/archivo/wdth.css";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-sans/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+
+/*
+ * Estilo "bodega industrial": fondo crema tipo papel, tinta casi negra y un solo
+ * acento naranja de seguridad. Se redefinen las escalas `slate` (grises cálidos) e
+ * `indigo` (tinta) para que todas las páginas tomen el estilo sin cambiar sus clases.
+ */
+@theme {
+  --font-sans: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-display: "Archivo Variable", "Archivo", "IBM Plex Sans", sans-serif;
+
+  --color-papel: #f4f1ea;
+  --color-tinta: #17181a;
+  --color-senal: #ff6b2c;
+  --color-senal-claro: #ff8148;
+
+  --color-slate-50: #fbfaf6;
+  --color-slate-100: #f4f1ea;
+  --color-slate-200: #d9d4c7;
+  --color-slate-300: #c9c3b4;
+  --color-slate-400: #8e897d;
+  --color-slate-500: #6b675e;
+  --color-slate-600: #4a473f;
+  --color-slate-700: #33312c;
+  --color-slate-800: #2b2d31;
+  --color-slate-900: #17181a;
+  --color-slate-950: #0e0f10;
+
+  --color-indigo-50: #f1eee6;
+  --color-indigo-100: #e4dfd3;
+  --color-indigo-200: #d9d4c7;
+  --color-indigo-300: #b5b0a4;
+  --color-indigo-400: #6e6a61;
+  --color-indigo-500: #2b2d31;
+  --color-indigo-600: #17181a;
+  --color-indigo-700: #2b2d31;
+  --color-indigo-800: #17181a;
+  --color-indigo-900: #101113;
+  --color-indigo-950: #0e0f10;
+
+  /* Esquinas casi rectas: nada de tarjetas muy redondeadas. */
+  --radius-sm: 1px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 3px;
+  --radius-2xl: 4px;
+
+  --shadow-xs: none;
+  --shadow-md: 0 2px 0 0 rgb(23 24 26 / 0.08);
+}
+
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 antialiased font-sans;
+    @apply bg-papel text-tinta antialiased font-sans;
+  }
+}
+
+/* Títulos tipo señalización. */
+.titulo-senal {
+  font-family: var(--font-display);
+  font-stretch: 78%;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 0.95;
+}
+
+/* ---------------------------------------------------------------------------
+ * Barra de navegación superior y sus animaciones
+ * ------------------------------------------------------------------------- */
+
+@keyframes nav-entrar {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes nav-pulso {
+  0% { box-shadow: 0 0 0 0 rgb(74 222 128 / 0.55); }
+  70% { box-shadow: 0 0 0 7px rgb(74 222 128 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(74 222 128 / 0); }
+}
+
+@keyframes nav-bajar {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes pagina-subir {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.nav-item {
+  animation: nav-entrar 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+.nav-item:hover { color: #fff; background-color: rgb(244 241 234 / 0.06); }
+.nav-item:focus-visible { outline: 2px solid var(--color-senal); outline-offset: -2px; }
+.nav-item .nav-rayita { transform: scaleX(0); transform-origin: left; transition: transform 0.25s ease; }
+.nav-item:hover .nav-rayita { transform: scaleX(1); }
+
+.nav-indicador { transition: transform 0.45s cubic-bezier(0.65, 0, 0.35, 1); }
+.nav-punto-vivo { animation: nav-pulso 2s infinite; }
+.nav-menu-movil { animation: nav-bajar 0.25s ease both; }
+.pagina-entrar { animation: pagina-subir 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-item, .nav-indicador, .nav-punto-vivo, .nav-menu-movil, .pagina-entrar {
+    animation: none;
+    transition: none;
   }
 }

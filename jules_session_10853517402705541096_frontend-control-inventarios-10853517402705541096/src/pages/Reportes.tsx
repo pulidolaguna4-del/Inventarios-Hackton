@@ -24,7 +24,7 @@ export const Reportes: React.FC = () => {
   const [aviso, setAviso] = useState<MensajeAviso | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [soloDiferencias, setSoloDiferencias] = useState('ALL');
-  const [semanaExportar, setSemanaExportar] = useState('');
+  const [sorteoExportar, setSorteoExportar] = useState('');
   const [fechaExportar, setFechaExportar] = useState('');
 
   if (cargando && !datos) return <Cargando texto="Cargando reportes..." />;
@@ -50,18 +50,18 @@ export const Reportes: React.FC = () => {
     },
     {
       tipo: 'conteo',
-      titulo: semanaExportar ? `Plan de conteo — semana ${semanaExportar}` : 'Plan de conteo anual (Tarea 8)',
-      nombrePorDefecto: semanaExportar ? `conteo_semana_${semanaExportar}` : 'Día2_Ejercicio8',
-      descripcion: 'Referencias que se cuentan cada semana, con su ubicación.',
-      extra: { semana: semanaExportar || undefined },
+      titulo: sorteoExportar ? `Sorteo de conteo #${sorteoExportar}` : 'Sorteos de conteo del año (Tarea 8)',
+      nombrePorDefecto: sorteoExportar ? `conteo_sorteo_${sorteoExportar}` : 'Día2_Ejercicio8',
+      descripcion: 'Referencias elegidas al azar en cada sorteo, con su ubicación.',
+      extra: { sorteo: sorteoExportar || undefined },
       control: (
         <input
           type="number"
           min={1}
-          max={52}
-          value={semanaExportar}
-          onChange={(e) => setSemanaExportar(e.target.value)}
-          placeholder="Todas las semanas"
+          max={progreso.sorteo_actual ?? 1}
+          value={sorteoExportar}
+          onChange={(e) => setSorteoExportar(e.target.value)}
+          placeholder="Todos los sorteos"
           className={CLASE_CAMPO}
         />
       ),
@@ -98,6 +98,7 @@ export const Reportes: React.FC = () => {
 
   const columnas: Column<RegistroConteo>[] = [
     { key: 'fecha', header: 'Fecha' },
+    { key: 'sorteo', header: 'Sorteo', render: (registro) => `#${registro.sorteo}` },
     { key: 'semana', header: 'Semana' },
     { key: 'sku', header: 'SKU', render: (registro) => <EtiquetaSku sku={registro.sku} /> },
     {
@@ -121,7 +122,8 @@ export const Reportes: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <EncabezadoPagina
-        titulo="Reportes y Exportación"
+        titulo="Reportes"
+        seccion="INVENTARIO / REPORTES Y ARCHIVOS"
         descripcion="Cumplimiento del plan de conteo, historial de registros y archivos CSV para entregar. Cada exportación se descarga y además queda guardada en la carpeta salidas/ del backend."
         icono={BarChart3}
       />
@@ -131,14 +133,14 @@ export const Reportes: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
           title="Cumplimiento a la fecha"
-          value={`${progreso.cumplimiento_a_la_fecha}%`}
-          description={`Semanas 1 a ${progreso.semana_actual}`}
+          value={`${progreso.cumplimiento}%`}
+          description={`${progreso.conteos_registrados} de ${progreso.conteos_totales} conteos del año`}
           icon={Award}
           colorTheme="amber"
         />
         <StatCard
-          title="Conteos registrados"
-          value={`${progreso.conteos_registrados} / ${progreso.conteos_planeados}`}
+          title="Contados / sorteados"
+          value={`${progreso.conteos_registrados} / ${progreso.conteos_sorteados}`}
           description={`${progreso.referencias_completas} referencias completas (5/5)`}
           icon={ClipboardList}
           colorTheme="indigo"
@@ -183,7 +185,7 @@ export const Reportes: React.FC = () => {
         <DataTable
           columns={columnas}
           data={registrosVisibles}
-          keyExtractor={(registro) => `${registro.semana}-${registro.sku}`}
+          keyExtractor={(registro) => `${registro.sorteo}-${registro.sku}`}
           searchPlaceholder="Buscar por SKU o responsable..."
           onSearchChange={setBusqueda}
           statuses={[{ value: 'DIFERENCIA', label: 'Solo con diferencia' }]}

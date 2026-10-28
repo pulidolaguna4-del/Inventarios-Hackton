@@ -1,0 +1,17 @@
+{
+  "fuente": "trabajo_1_LOGISTICA (Tarea 1), hoja SISTEMA_ABC",
+  "alcance": "Solo las 11 referencias nuevas (PRODUCTOS A INCLUIR). Las ubicaciones U01–U15 son de la maqueta del robot (bodega en U, un nivel), no de la bodega de Arauca.",
+  "referencias": [
+    { "sku": 200040, "ubicacion_logistica": "U01-N1-I", "zona": "Entrada/frente", "clase_abc_logistica": "A", "demanda_anual": 279 },
+    { "sku": 300026, "ubicacion_logistica": "U02-N1-D", "zona": "Entrada/frente", "clase_abc_logistica": "A", "demanda_anual": 258 },
+    { "sku": 300027, "ubicacion_logistica": "U03-N1-I", "zona": "Lado izquierdo", "clase_abc_logistica": "A", "demanda_anual": 276 },
+    { "sku": 400019, "ubicacion_logistica": "U04-N1-D", "zona": "Lado izquierdo", "clase_abc_logistica": "A", "demanda_anual": 507 },
+    { "sku": 300028, "ubicacion_logistica": "U05-N1-I", "zona": "Fondo", "clase_abc_logistica": "A", "demanda_anual": 104 },
+    { "sku": 100031, "ubicacion_logistica": "U06-N1-D", "zona": "Fondo", "clase_abc_logistica": "A", "demanda_anual": 261 },
+    { "sku": 200041, "ubicacion_logistica": "U07-N1-I", "zona": "Fondo", "clase_abc_logistica": "A", "demanda_anual": 141 },
+    { "sku": 200042, "ubicacion_logistica": "U08-N1-D", "zona": "Fondo", "clase_abc_logistica": "A", "demanda_anual": 418 },
+    { "sku": 100032, "ubicacion_logistica": "U09-N1-I", "zona": "Lado derecho", "clase_abc_logistica": "A", "demanda_anual": 107 },
+    { "sku": 100033, "ubicacion_logistica": "U10-N1-D", "zona": "Lado derecho", "clase_abc_logistica": "B", "demanda_anual": 539 },
+    { "sku": 400020, "ubicacion_logistica": "U11-N1-I", "zona": "Salida/frente", "clase_abc_logistica": "C", "demanda_anual": 502 }
+  ]
+}

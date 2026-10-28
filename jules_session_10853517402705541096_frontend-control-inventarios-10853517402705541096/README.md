@@ -1,21 +1,21 @@
 # Frontend — Control de Inventarios, Bodega Arauca
 
 Interfaz en React + TypeScript + Vite + Tailwind para el sistema de inventarios de la hackatón. Se conecta al backend
-de Python (`../inventarios/servidor.py`), que es quien tiene las reglas del caso y los datos reales.
+de Express (`../backend`), que es quien tiene las reglas del caso y los datos reales.
 
 ## Cómo se usa
 
-### En la presentación (sin Node)
+### En la presentación
 ```bash
-cd ../inventarios
-python servidor.py        # http://localhost:8000
+cd ../backend
+npm start                 # http://localhost:8000
 ```
-El servidor de Python sirve la versión compilada que está en `inventarios/static/`.
+Express sirve la versión compilada que está en `backend/public/`.
 
 ### Para desarrollar
 ```bash
 npm install               # solo la primera vez
-# en otra terminal: cd ../inventarios && python servidor.py
+# en otra terminal: cd ../backend && npm start
 npm run dev               # http://localhost:5173 (las llamadas a /api se redirigen al puerto 8000)
 ```
 
@@ -23,9 +23,9 @@ npm run dev               # http://localhost:5173 (las llamadas a /api se rediri
 ```bash
 npm test                  # pruebas del cliente de la API
 npm run lint
-npm run build             # compila hacia ../inventarios/static/
+npm run build             # compila hacia ../backend/public/
 ```
-Si no se corre `npm run build`, el servidor de Python sigue mostrando la versión anterior.
+Si no se corre `npm run build`, el servidor sigue mostrando la versión anterior.
 
 ## Estructura
 

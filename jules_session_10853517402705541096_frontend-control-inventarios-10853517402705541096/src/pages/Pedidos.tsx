@@ -109,7 +109,8 @@ export const Pedidos: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <EncabezadoPagina
-        titulo="Pedidos de la Bodega"
+        titulo="Pedidos"
+        seccion="INVENTARIO / PEDIDOS DE ARAUCA"
         descripcion="Estado de cada pedido de Arauca. Solo se puede avanzar al estado siguiente: Pendiente → En alistamiento → Alistado → En entrega → Entregado. Cada cambio queda con su fecha y hora."
         icono={Truck}
         acciones={

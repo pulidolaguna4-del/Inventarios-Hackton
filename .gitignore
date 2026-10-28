@@ -1,4 +1,4 @@
-# Dependencias y compilados del frontend (static/ del backend SÍ se sube: es lo que se presenta)
+# Dependencias y compilados del frontend (backend/public/ SÍ se sube: es lo que se presenta)
 node_modules/
 dist/
 
@@ -9,8 +9,10 @@ __pycache__/
 # Temporales de escritura atómica
 *.tmp
 
-# Datos que genera el sistema al usarse (se recrean solos)
+# Datos del backend viejo en Python (se recrean solos). Los de backend/datos SÍ se suben:
+# maestro, sorteos, registros de conteo y estados de pedidos (decisión del equipo).
 inventarios/datos/*.json
+backend/salidas/*.csv
 inventarios/salidas/*.csv
 !inventarios/salidas/.gitkeep
 

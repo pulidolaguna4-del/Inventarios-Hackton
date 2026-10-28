@@ -1,0 +1,23 @@
+{
+  "46881988": {
+    "estado": "Entregado",
+    "historial": [
+      {
+        "estado": "En alistamiento",
+        "fecha_hora": "2026-10-28T08:31:56"
+      },
+      {
+        "estado": "Alistado",
+        "fecha_hora": "2026-10-28T08:32:01"
+      },
+      {
+        "estado": "En entrega",
+        "fecha_hora": "2026-10-28T08:32:02"
+      },
+      {
+        "estado": "Entregado",
+        "fecha_hora": "2026-10-28T08:32:03"
+      }
+    ]
+  }
+}

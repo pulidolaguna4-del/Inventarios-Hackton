@@ -6,14 +6,14 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    // En desarrollo (npm run dev) las llamadas a /api van al backend de Python.
+    // En desarrollo (npm run dev) las llamadas a /api van al backend de Express.
     proxy: {
       '/api': 'http://localhost:8000',
     },
   },
   build: {
     // `npm run build` deja la página lista dentro del backend, que la sirve en http://localhost:8000.
-    outDir: '../inventarios/static',
+    outDir: '../backend/public',
     emptyOutDir: true,
   },
 })

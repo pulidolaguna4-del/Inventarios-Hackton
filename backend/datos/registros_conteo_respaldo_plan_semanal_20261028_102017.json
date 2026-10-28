@@ -1,0 +1,32 @@
+[
+  {
+    "fecha": "2026-10-27",
+    "responsable": "darwin",
+    "semana": 44,
+    "sku": 100030,
+    "codigo_ubicacion": "C4-F05-N1",
+    "cantidad_sistema": 117,
+    "cantidad_contada": 115,
+    "diferencia": -2
+  },
+  {
+    "fecha": "2026-10-27",
+    "responsable": "darwin",
+    "semana": 44,
+    "sku": 200015,
+    "codigo_ubicacion": "C5-F04-N1",
+    "cantidad_sistema": 136,
+    "cantidad_contada": 5,
+    "diferencia": -131
+  },
+  {
+    "fecha": "2026-10-28",
+    "responsable": "darwin funcionar",
+    "semana": 44,
+    "sku": 200020,
+    "codigo_ubicacion": "C3-F09-N2",
+    "cantidad_sistema": 127,
+    "cantidad_contada": 120,
+    "diferencia": -7
+  }
+]

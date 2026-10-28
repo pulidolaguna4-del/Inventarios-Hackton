@@ -1,5 +1,7 @@
 # CLAUDE.md — Sistema de Inventarios (Hackatón Logístico SENA 2026)
 
+> **⚠️ OBSOLETO (28/10/2026).** Este archivo describe la versión vieja en Python. El proyecto ahora usa Node.js + Express (`backend/`) y React. Las reglas y el estado actual están en `backend/CLAUDE.md`.
+
 ## Qué es este proyecto
 
 Es el backend en Python y un frontend básico de pruebas para la bodega satélite de **Arauca** de *Distribuciones Centauros* (caso de la hackatón). Tiene dos funciones que se califican:

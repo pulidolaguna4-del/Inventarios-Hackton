@@ -1,20 +1,24 @@
-// Cliente de la API del backend (servidor.py).
-// Las rutas son relativas: en producción las sirve el mismo servidor de Python y
+// Cliente de la API del backend (Express, ../backend/servidor.js).
+// Las rutas son relativas: en producción las sirve el mismo servidor de Express y
 // en desarrollo Vite las redirige a http://localhost:8000 (ver vite.config.ts).
 
 import type {
   Maestro,
   NuevoRegistroConteo,
-  PlanGenerado,
   RegistroConteo,
+  ResultadoSorteo,
   RespuestaPedidos,
   ResultadoPicking,
   Resumen,
   ResumenConteo,
-  SemanaConteo,
+  SorteoConteo,
   TipoExportacion,
   EstadoPedido,
   Pedido,
+  LayoutBodega,
+  PickingConTrazado,
+  InstruccionesRobot,
+  VistaMapa,
 } from '../types/inventario';
 
 /** Error que devuelve el backend como {"error": "mensaje"} junto con su código HTTP. */
@@ -33,7 +37,7 @@ export async function pedirJson<T>(ruta: string, opciones?: RequestInit): Promis
   try {
     respuesta = await fetch(ruta, opciones);
   } catch {
-    throw new ErrorApi('No hay conexión con el servidor. ¿Está corriendo "python servidor.py"?', 0);
+    throw new ErrorApi('No hay conexión con el servidor. ¿Está corriendo el backend (npm start en la carpeta backend)?', 0);
   }
   const datos = await respuesta.json().catch(() => ({}));
   if (!respuesta.ok) {
@@ -66,13 +70,15 @@ export const api = {
   recalcularMaestro: () => enviarJson<Maestro>('/api/maestro/generar', {}),
 
   obtenerProgresoConteo: () => pedirJson<ResumenConteo>('/api/conteo/progreso'),
-  obtenerSemanaConteo: (semana: number) => pedirJson<SemanaConteo>(`/api/conteo/semana/${semana}`),
-  obtenerRegistrosConteo: (filtros: { sku?: number; semana?: number } = {}) =>
+  obtenerSorteo: (numero: number) => pedirJson<SorteoConteo>(`/api/conteo/sorteo/${numero}`),
+  /** Sortea `cantidad` referencias al azar. Responde 409 si el sorteo anterior tiene pendientes y no se fuerza. */
+  sortear: (cantidad: number, forzar = false) => enviarJson<ResultadoSorteo>('/api/conteo/sorteo', { cantidad, forzar }),
+  /** Empieza un año nuevo: respalda los sorteos y registros y los deja vacíos. */
+  reiniciarConteo: () => enviarJson<{ mensaje: string; respaldos: string[] }>('/api/conteo/reiniciar', {}),
+  obtenerRegistrosConteo: (filtros: { sku?: number; sorteo?: number; semana?: number } = {}) =>
     pedirJson<{ registros: RegistroConteo[] }>(conParametros('/api/conteo/registros', filtros)),
   registrarConteo: (registro: NuevoRegistroConteo) =>
     enviarJson<{ mensaje: string; registro: RegistroConteo }>('/api/conteo/registro', registro),
-  generarPlanConteo: (semilla: number, forzar = false) =>
-    enviarJson<PlanGenerado>('/api/conteo/plan/generar', { semilla, forzar }),
 
   obtenerPedidos: (fecha?: string) => pedirJson<RespuestaPedidos>(conParametros('/api/pedidos', { fecha })),
   avanzarPedido: (idPedido: number, estado: EstadoPedido) =>
@@ -82,6 +88,15 @@ export const api = {
     ),
 
   obtenerPickingPrueba: () => pedirJson<ResultadoPicking>('/api/picking/prueba'),
+
+  /** Todo lo que el mapa 3D necesita para dibujar la bodega de Arauca o la maqueta. */
+  obtenerLayout: (vista: VistaMapa) => pedirJson<LayoutBodega>(conParametros('/api/bodega/layout', { vista })),
+  /** Recorridos con su trazado punto por punto (Tarea 6 en Arauca, o los de la maqueta). */
+  obtenerRecorridosConTrazado: (vista: VistaMapa) =>
+    pedirJson<PickingConTrazado>(vista === 'arauca' ? '/api/picking/prueba?con_trazado=true' : '/api/picking/maqueta'),
+  /** Instrucciones del robot para un recorrido, a escala 1:N (sin escala, la del backend). */
+  obtenerInstruccionesRobot: (vista: VistaMapa, recorrido: number, escala?: number) =>
+    pedirJson<InstruccionesRobot>(conParametros('/api/picking/instrucciones', { vista, recorrido, escala })),
 
   /**
    * Pide el CSV al backend (que también lo guarda en salidas/) y lo descarga en el navegador.

@@ -22,12 +22,12 @@ describe('Cliente de la API del backend', () => {
   });
 
   it('convierte {"error": ...} del backend en un ErrorApi con su código', async () => {
-    simularFetch({ error: 'La referencia 1 ya se registró en la semana 1' }, 400);
+    simularFetch({ error: 'La referencia 1 ya se contó en el sorteo 1' }, 400);
     const promesa = pedirJson('/api/conteo/registro');
     await expect(promesa).rejects.toBeInstanceOf(ErrorApi);
     await expect(pedirJson('/api/conteo/registro')).rejects.toMatchObject({
       codigo: 400,
-      message: 'La referencia 1 ya se registró en la semana 1',
+      message: 'La referencia 1 ya se contó en el sorteo 1',
     });
   });
 
@@ -38,17 +38,19 @@ describe('Cliente de la API del backend', () => {
 
   it('registra un conteo con POST y cuerpo JSON', async () => {
     const fetchFalso = simularFetch({ mensaje: 'Conteo registrado', registro: { sku: 400016, diferencia: 0 } });
-    await api.registrarConteo({ semana: 1, sku: 400016, responsable: 'Ana', cantidad_contada: 10 });
+    await api.registrarConteo({ sorteo: 1, sku: 400016, responsable: 'Ana', cantidad_contada: 10 });
 
     const [ruta, opciones] = fetchFalso.mock.calls[0];
     expect(ruta).toBe('/api/conteo/registro');
     expect(opciones.method).toBe('POST');
-    expect(JSON.parse(opciones.body)).toEqual({ semana: 1, sku: 400016, responsable: 'Ana', cantidad_contada: 10 });
+    expect(JSON.parse(opciones.body)).toEqual({ sorteo: 1, sku: 400016, responsable: 'Ana', cantidad_contada: 10 });
   });
 
-  it('el 409 al regenerar el plan llega como ErrorApi para poder pedir "forzar"', async () => {
-    simularFetch({ error: 'Ya hay 3 conteos registrados con el plan actual.' }, 409);
-    await expect(api.generarPlanConteo(2026)).rejects.toMatchObject({ codigo: 409 });
+  it('sortea enviando la cantidad; el 409 llega como ErrorApi para poder pedir "forzar"', async () => {
+    const fetchFalso = simularFetch({ error: 'Al sorteo 1 le faltan 3 referencias por contar.' }, 409);
+    await expect(api.sortear(56)).rejects.toMatchObject({ codigo: 409 });
+    expect(fetchFalso.mock.calls[0][0]).toBe('/api/conteo/sorteo');
+    expect(JSON.parse(fetchFalso.mock.calls[0][1].body)).toEqual({ cantidad: 56, forzar: false });
   });
 
   it('arma los parámetros de consulta solo con los valores que vienen', async () => {

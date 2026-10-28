@@ -1,4 +1,4 @@
-// Tipos que reflejan exactamente el JSON que devuelve el backend (servidor.py).
+// Tipos que reflejan exactamente el JSON que devuelve el backend (Express, ../backend).
 // Los nombres de los campos son los mismos del backend, en español y snake_case.
 
 // ---------------------------------------------------------------------------
@@ -38,6 +38,10 @@ export interface Referencia {
   numero_plano: number;
   distancia_salida_m: number;
   fuente_ubicacion: 'generada' | 'logistica';
+  /** Posición en la maqueta del robot según el entregable de logística (U01-N1-I...). Solo las 11 nuevas. */
+  ubicacion_logistica: string | null;
+  /** Clase ABC que puso logística (por unidades). Distinta de clase_abc (por líneas de pedido). */
+  clase_abc_logistica: ClaseAbc | null;
 }
 
 export interface Maestro {
@@ -56,12 +60,15 @@ export interface Maestro {
 }
 
 // ---------------------------------------------------------------------------
-// Conteo cíclico
+// Conteo cíclico por sorteos
 // ---------------------------------------------------------------------------
 
 export interface RegistroConteo {
   fecha: string;
   responsable: string;
+  /** Número del sorteo en que salió la referencia. */
+  sorteo: number;
+  /** Semana del año en que se hizo el conteo (sale de la fecha). */
   semana: number;
   sku: number;
   codigo_ubicacion: string | null;
@@ -71,7 +78,7 @@ export interface RegistroConteo {
 }
 
 export interface NuevoRegistroConteo {
-  semana: number;
+  sorteo: number;
   sku: number;
   responsable: string;
   cantidad_contada: number;
@@ -86,7 +93,8 @@ export interface ProgresoReferencia {
   descripcion: string;
   categoria: string;
   codigo_ubicacion: string | null;
-  semanas_programadas: number[];
+  /** Números de los sorteos en que ha salido la referencia. */
+  sorteos: number[];
   contados: number;
   estado: string; // "contada X/5"
   sale_de_la_lista: boolean;
@@ -94,55 +102,89 @@ export interface ProgresoReferencia {
   tiene_diferencia: boolean;
 }
 
-export interface VerificacionPlan {
+export interface VerificacionSorteos {
   valido: boolean;
   errores: string[];
   referencias: number;
-  semanas: number;
-  total_conteos: number;
   conteos_esperados: number;
+  conteos_sorteados: number;
   minimo_por_referencia: number;
   maximo_por_referencia: number;
+  /** Todas las referencias ya salieron 5 veces. */
+  completo: boolean;
 }
 
 export interface AvanceSemana {
   semana: number;
-  planeados: number;
   registrados: number;
   con_diferencia: number;
 }
 
-export interface ResumenConteo {
-  semana_actual: number;
-  conteos_registrados: number;
-  conteos_planeados: number;
-  cumplimiento_a_la_fecha: number;
-  semilla: number;
-  referencias_completas: number;
-  referencias_con_diferencia: number;
-  verificacion_plan: VerificacionPlan;
-  avance_semanal: AvanceSemana[];
-  progreso: ProgresoReferencia[];
+export interface ResumenSorteo {
+  numero: number;
+  fecha_hora: string;
+  periodo: number;
+  tamano: number;
+  registrados: number;
+  con_diferencia: number;
 }
 
-export interface ReferenciaSemana extends ProgresoReferencia {
-  contada_esta_semana: boolean;
-  registro_semana: RegistroConteo | null;
+/** Periodo de conteo del plan de logística: en cada uno se cuentan todas las referencias una vez. */
+export interface PeriodoConteo {
+  numero: number;
+  nombre: string;
+  mes_inicio: number;
+  mes_fin: number;
+  sorteos: number[];
+  conteos_sorteados: number;
+  conteos_registrados: number;
+  referencias_contadas: number;
+  referencias_totales: number;
+}
+
+export interface ResumenConteo {
+  semana_actual: number;
+  referencias: number;
+  conteos_por_anio: number;
+  conteos_totales: number;
+  conteos_sorteados: number;
+  conteos_registrados: number;
+  pendientes_por_contar: number;
+  por_sortear: number;
+  referencias_disponibles: number;
+  cumplimiento: number;
+  referencias_completas: number;
+  referencias_con_diferencia: number;
+  sorteo_actual: number | null;
+  periodo_actual: number;
+  periodos: PeriodoConteo[];
+  sorteos: ResumenSorteo[];
+  verificacion: VerificacionSorteos;
+  avance_semanal: AvanceSemana[];
+  progreso: ProgresoReferencia[];
+  cantidad_sorteo_por_defecto: number;
+}
+
+export interface ReferenciaSorteo extends ProgresoReferencia {
+  contada_en_sorteo: boolean;
+  registro_sorteo: RegistroConteo | null;
   cantidad_sistema_sugerida: number;
 }
 
-export interface SemanaConteo {
-  semana: number;
+export interface SorteoConteo {
+  sorteo: number;
+  fecha_hora: string;
+  periodo: number;
+  semilla: number;
   tamano: number;
   pendientes: number;
-  referencias: ReferenciaSemana[];
+  referencias: ReferenciaSorteo[];
 }
 
-export interface PlanGenerado {
+export interface ResultadoSorteo {
   mensaje: string;
-  respaldo_registros: string | null;
-  tamanos: number[];
-  verificacion: VerificacionPlan;
+  sorteo: number;
+  tamano: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -215,3 +257,140 @@ export interface ResultadoPicking {
 // ---------------------------------------------------------------------------
 
 export type TipoExportacion = 'maestro' | 'conteo' | 'registros_conteo' | 'pedidos' | 'picking';
+
+// ---------------------------------------------------------------------------
+// Mapa 3D: layout, trazado de los recorridos e instrucciones del robot
+// ---------------------------------------------------------------------------
+
+export type VistaMapa = 'arauca' | 'maqueta';
+
+export interface Punto {
+  x: number;
+  y: number;
+}
+
+/** Celda de almacenamiento. (x, y) es el centro del estante en planta y z la altura del centro de la caja. */
+export interface CeldaLayout {
+  codigo_ubicacion: string;
+  columna: number | null;
+  fila: number | null;
+  nivel: number;
+  /** Número del plano (Arauca) o código U.. (maqueta). */
+  etiqueta: string;
+  x: number;
+  y: number;
+  z: number;
+  punto_recogida: Punto;
+  ocupada: boolean;
+  sku: number | null;
+  descripcion: string | null;
+  clase_abc: ClaseAbc | null;
+  categoria: string | null;
+  indice_anillo?: number;
+  zona?: string;
+  lado?: 'I' | 'D';
+}
+
+export interface SegmentoLayout {
+  nombre: string;
+  tipo?: string;
+  x_inicio: number;
+  y_inicio: number;
+  x_fin: number;
+  y_fin: number;
+}
+
+export interface LayoutBodega {
+  vista: VistaMapa;
+  nombre: string;
+  medidas: {
+    ancho_total: number;
+    largo_total: number;
+    limites: { x_min: number; x_max: number; y_min: number; y_max: number };
+    niveles: number;
+    travesanos: number;
+    alto_nivel: number;
+    largo_celda: number;
+    fondo_rack: number;
+    ancho_pasillo: number;
+  };
+  celdas: CeldaLayout[];
+  salidas: { nombre: string; x: number; y: number }[];
+  cabeceras: { nombre: string; y: number; x_inicio: number; x_fin: number }[];
+  pasillos: SegmentoLayout[];
+}
+
+export interface UbicacionParada {
+  codigo_ubicacion: string;
+  nivel: number;
+  tiempo_recogida_s: number;
+  sku?: number;
+}
+
+export interface EventoTramo {
+  tipo: 'tramo';
+  tipo_tramo: 'pasillo' | 'cabecera' | 'zona_abierta' | 'frente';
+  punto_inicio: Punto;
+  punto_fin: Punto;
+  distancia_m: number;
+  distancia_acum_inicio_m: number;
+  distancia_acum_fin_m: number;
+  tiempo_inicio_s: number;
+  tiempo_fin_s: number;
+}
+
+export interface EventoParada {
+  tipo: 'parada';
+  orden: number;
+  etiqueta: string;
+  niveles: number[];
+  ubicaciones: UbicacionParada[];
+  punto: Punto;
+  tiempo_recogida_s: number;
+  distancia_acum_m: number;
+  tiempo_inicio_s: number;
+  tiempo_fin_s: number;
+}
+
+export type EventoTrazado = EventoTramo | EventoParada;
+
+export interface RecorridoConTrazado {
+  recorrido: number;
+  salida_inicio: string;
+  salida_fin: string;
+  paradas: { etiqueta?: string; numero_plano?: number; niveles: number[] }[];
+  distancia_m: number;
+  tiempo_desplazamiento_s: number;
+  tiempo_recogida_s: number;
+  tiempo_total_s: number;
+  es_el_mas_demorado: boolean;
+  trazado: { eventos: EventoTrazado[]; distancia_m: number; tiempo_total_s: number };
+  tiempo_inicio_global_s: number;
+  tiempo_fin_global_s: number;
+}
+
+export interface PickingConTrazado {
+  metodo: string;
+  recorridos: RecorridoConTrazado[];
+  totales: ResultadoPicking['totales'];
+}
+
+export interface InstruccionRobot {
+  orden: number;
+  accion: 'avanzar' | 'girarDerecha' | 'girarIzquierda' | 'recoger';
+  valor: number | null;
+  comentario: string | null;
+  texto: string;
+}
+
+export interface InstruccionesRobot {
+  vista: VistaMapa;
+  recorrido: number;
+  escala: number;
+  distancia_m: number;
+  instrucciones: InstruccionRobot[];
+  total_cm: number;
+  numero_instrucciones: number;
+  texto: string;
+  codigo_arduino: string;
+}
