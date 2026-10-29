@@ -20,6 +20,7 @@ import type {
   InstruccionesRobot,
   VistaMapa,
   ConsultaRecorridos,
+  FormatoExportacion,
 } from '../types/inventario';
 
 /** Error que devuelve el backend como {"error": "mensaje"} junto con su código HTTP. */
@@ -109,21 +110,22 @@ export const api = {
     ),
 
   /**
-   * Pide el CSV al backend (que también lo guarda en salidas/) y lo descarga en el navegador.
-   * Devuelve el nombre final del archivo.
+   * Pide el reporte al backend (que también lo guarda en salidas/) y lo descarga en el navegador.
+   * Por defecto es el .xlsx con formato; con formato 'csv', el CSV plano. Devuelve el nombre del archivo.
    */
-  descargarCsv: async (
+  descargarReporte: async (
     tipo: TipoExportacion,
     nombre: string,
     extra: Record<string, string | number | undefined> = {},
+    formato: FormatoExportacion = 'xlsx',
   ): Promise<string> => {
-    const respuesta = await fetch(conParametros(`/api/exportar/${tipo}`, { nombre, ...extra }));
+    const respuesta = await fetch(conParametros(`/api/exportar/${tipo}`, { nombre, ...extra, formato }));
     if (!respuesta.ok) {
       const datos = await respuesta.json().catch(() => ({}));
       throw new ErrorApi(datos.error || `Error ${respuesta.status}`, respuesta.status);
     }
     const archivo = await respuesta.blob();
-    const nombreArchivo = nombre.replace(/\.csv$/i, '') + '.csv';
+    const nombreArchivo = `${nombre.replace(/\.(csv|xlsx)$/i, '')}.${formato}`;
     const enlace = document.createElement('a');
     enlace.href = URL.createObjectURL(archivo);
     enlace.download = nombreArchivo;

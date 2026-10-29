@@ -149,9 +149,9 @@ test('GET /api/picking/instrucciones: por defecto maqueta 1:20; la escala llega 
   assert.equal((await pedir('/picking/instrucciones?escala=0')).codigo, 400);
 });
 
-test('exportar: el archivo se llama exactamente Día2_Ejercicio6.csv, con BOM UTF-8 y punto y coma', async () => {
+test('exportar con ?formato=csv: el archivo se llama exactamente Día2_Ejercicio6.csv, con BOM UTF-8 y punto y coma', async () => {
   // Llega con la "í" descompuesta (i + tilde combinante) y debe quedar igual a la compuesta.
-  const respuesta = await fetch(`${base}/exportar/picking?nombre=${encodeURIComponent('Día2_Ejercicio6')}`);
+  const respuesta = await fetch(`${base}/exportar/picking?nombre=${encodeURIComponent('Día2_Ejercicio6')}&formato=csv`);
   assert.equal(respuesta.status, 200);
   const disposicion = respuesta.headers.get('content-disposition');
   assert.match(disposicion, /filename="Dia2_Ejercicio6\.csv"/);
@@ -159,4 +159,14 @@ test('exportar: el archivo se llama exactamente Día2_Ejercicio6.csv, con BOM UT
   const contenido = Buffer.from(await respuesta.arrayBuffer());
   assert.equal(contenido.subarray(0, 3).toString('hex'), 'efbbbf');
   assert.ok(contenido.toString('utf8').split('\r\n')[0].includes(';'));
+});
+
+test('exportar por defecto da un .xlsx con el nombre exacto, el tipo correcto y la copia en salidas/', async () => {
+  const respuesta = await fetch(`${base}/exportar/picking?nombre=${encodeURIComponent('Día2_Ejercicio6')}`);
+  assert.equal(respuesta.status, 200);
+  assert.equal(respuesta.headers.get('content-type'), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  assert.ok(respuesta.headers.get('content-disposition').includes(`filename*=UTF-8''${encodeURIComponent('Día2_Ejercicio6.xlsx')}`));
+  const contenido = Buffer.from(await respuesta.arrayBuffer());
+  assert.equal(contenido.subarray(0, 2).toString(), 'PK'); // es un zip
+  assert.equal((await pedir('/exportar/picking?nombre=x&formato=pdf')).codigo, 400);
 });

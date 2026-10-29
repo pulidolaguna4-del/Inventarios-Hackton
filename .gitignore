@@ -13,6 +13,7 @@ __pycache__/
 # maestro, sorteos, registros de conteo y estados de pedidos (decisión del equipo).
 inventarios/datos/*.json
 backend/salidas/*.csv
+backend/salidas/*.xlsx
 inventarios/salidas/*.csv
 !inventarios/salidas/.gitkeep
 

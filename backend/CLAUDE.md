@@ -153,7 +153,9 @@ backend/
 │   ├── picking.js       # consolidar el lote, agrupar de a 3 y ordenar la ruta
 │   ├── pedidos.js       # estados de los pedidos e historial
 │   ├── conteo.js        # sorteos al azar, registro de conteos y progreso
-│   └── exportar.js      # exportaciones CSV
+│   ├── exportar.js      # exportaciones CSV y guardado en salidas/
+│   ├── reporteExcel.js  # escritor de .xlsx a mano (zip + XML con node:zlib)
+│   └── reportes.js      # hojas de cada reporte en Excel (picking, conteo, maestro)
 ├── public/              # frontend React COMPILADO (lo genera npm run build; no editar a mano)
 ├── datos/               # Excel original + JSON generados (maestro, estados, sorteos, registros)
 ├── salidas/             # exportaciones CSV para entregar
@@ -335,7 +337,14 @@ Todas las respuestas son JSON. Los errores se devuelven como `{"error": "mensaje
 | GET | `/api/conteo/progreso` | Totales del año, `periodo_actual` y `periodos`, sorteos (con `periodo`), avance por semana, progreso por SKU y verificación |
 | GET | `/api/conteo/registros?sku=&sorteo=&semana=` | Historial de conteos, del más reciente al más antiguo |
 | POST | `/api/conteo/reiniciar` | Respalda sorteos y registros y empieza un año nuevo |
-| GET | `/api/exportar/<tipo>?nombre=Día2_Ejercicio6` | Guarda el CSV en `salidas/` y lo descarga. Tipos: `maestro`, `conteo` (los sorteos; opcional `&sorteo=N`), `registros_conteo`, `pedidos` (`&fecha=`), `picking` |
+| GET | `/api/exportar/<tipo>?nombre=Día2_Ejercicio6&formato=xlsx\|csv` | Guarda el reporte en `salidas/` y lo descarga (por defecto `.xlsx` con formato; `formato=csv` para el CSV plano). Tipos: `maestro`, `conteo` (los sorteos; opcional `&sorteo=N`), `registros_conteo`, `pedidos` (`&fecha=`), `picking` |
+
+**Reportes en Excel (.xlsx, por defecto desde el 29/10/2026).** `GET /api/exportar/<tipo>` devuelve un `.xlsx` con formato (`Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`) y guarda la copia en `salidas/<nombre>.xlsx` (temporal + renombrar). Con `?formato=csv` sale el CSV plano de antes.
+- **Escritor propio, sin dependencias** (`src/reporteExcel.js`): el zip y los XML se arman a mano con `node:zlib` (`deflateRawSync` y `crc32`). Partes: `[Content_Types].xml`, `_rels/.rels`, `xl/workbook.xml`, `xl/_rels/workbook.xml.rels`, `xl/styles.xml` y una `xl/worksheets/sheetN.xml` por hoja. Textos en línea (`t="inlineStr"`), sin `sharedStrings.xml`. `crearXlsx(hojas)` recibe las hojas como datos (`nombre, titulo, bloque, columnas [{titulo, formato, ancho}], filas [{valores, fondo}], zebra, leyenda, congelarEncabezado, autofiltro`).
+- **Formato:** título combinado (14, negrita, blanco sobre `#1F3864`), encabezado blanco sobre azul oscuro con ajuste de texto, bordes finos, zebra `#F2F2F2`, enteros sin decimales y decimales con `0.0`, totales en negrita con borde superior grueso y fondo `#D9E2F3`, encabezado congelado, autofiltro (con su `_xlnm._FilterDatabase`) y anchos calculados para que nunca salga `####` ni el botón del filtro tape el encabezado. Colores: nivel 1 `#FFE699`, nivel 2 `#F4B7B7`, ambos `#FFCC99`, alerta `#FF7070`, clase A `#C6EFCE`, B `#FFEB9C`, C `#E7E6E6`.
+- **Reportes** (`src/reportes.js`): `Día2_Ejercicio6` = picking de la Tarea 6 pintado por nivel, subtotal por recorrido y TOTAL GENERAL (174,4 m) con leyenda. `Día2_Ejercicio8` = hojas Sorteos, Verificación (OK solo si la referencia lleva exactamente 5; si no, REVISAR en rojo; bloque con total de referencias, conteos y semilla del último sorteo) y Semillas. `Día2_Ejercicio1` = maestro pintado por clase ABC. Registros de conteo y pedidos salen como tabla simple (diferencias en rojo).
+- **Verificado en Excel** (29/10/2026, por automatización COM): los tres archivos de entrega abren sin aviso de reparación, sin `####`, con panel congelado y autofiltro. Control: un `.xlsx` con el XML mal ordenado hace fallar `Workbooks.Open`, así que la prueba sí detecta archivos dañados.
+- Nota: a mitad de año casi todas las filas de Verificación salen en REVISAR, porque todavía no llevan 5 conteos.
 
 **Formato de los CSV** (`datos.textoCsv`, columnas en `config.js`): cada columna es `{campo, titulo}`, y el título es el encabezado en español que se ve en Excel ("Código de ubicación", "Distancia total del recorrido (m)"…). Los valores se escriben para Excel en español: decimales con coma (`57,6`), `Sí`/`No`, fecha y hora sin la "T" y vacío en lugar de null. Filas enriquecidas en `exportar.js`:
 - `Día2_Ejercicio6` (`filasDespacho`): cada fila trae la salida, la distancia y el tiempo total de su recorrido y si es el más demorado. Sin SKU ni cantidad, porque la Tarea 6 son posiciones sin SKU.

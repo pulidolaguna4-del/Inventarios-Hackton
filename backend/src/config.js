@@ -267,6 +267,12 @@ export const STOCK_SIMULADO_MAXIMO = 150;
 // Excel en español (Colombia) abre bien los CSV separados por punto y coma.
 export const SEPARADOR_CSV = ';';
 // BOM UTF-8 para que Excel muestre bien las tildes.
+// Formatos de exportación: .xlsx con formato (por defecto) o el CSV plano.
+export const FORMATOS_EXPORTACION = ['xlsx', 'csv'];
+export const TIPO_CONTENIDO_EXPORTACION = {
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  csv: 'text/csv; charset=utf-8',
+};
 export const BOM_UTF8 = '﻿';
 
 // Los archivos de entrega se llaman Día<N>_Ejercicio<N> (ej. Día2_Ejercicio6).

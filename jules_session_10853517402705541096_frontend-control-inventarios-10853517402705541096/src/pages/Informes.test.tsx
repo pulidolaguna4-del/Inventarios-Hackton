@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { Informes } from './Informes';
 import { ARCHIVOS_ENTREGA } from '../utils/entregas';
 
-const descargarCsv = vi.fn().mockResolvedValue('Día2_Ejercicio6.csv');
+const descargarReporte = vi.fn().mockResolvedValue('Día2_Ejercicio6.xlsx');
 
 vi.mock('../services/api', () => ({
   api: {
@@ -15,7 +15,7 @@ vi.mock('../services/api', () => ({
       }),
     obtenerRegistrosConteo: () => Promise.resolve({ registros: [{ diferencia: 1 }, { diferencia: 0 }] }),
     obtenerResumen: () => Promise.resolve({ fechas_disponibles: ['2018-01-02'] }),
-    descargarCsv: (...argumentos: unknown[]) => descargarCsv(...argumentos),
+    descargarReporte: (...argumentos: unknown[]) => descargarReporte(...argumentos),
   },
 }));
 
@@ -31,8 +31,8 @@ describe('Paso 4: Informes', () => {
     render(<Informes />);
     expect(await screen.findByText('2.3%')).toBeTruthy();
     expect(screen.getByText(/Verificado: ninguna referencia se repite/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Día2_Ejercicio6\.csv/ }));
-    await waitFor(() => expect(descargarCsv).toHaveBeenCalledWith('picking', 'Día2_Ejercicio6', {}));
-    expect(await screen.findByText(/Descargado Día2_Ejercicio6\.csv/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Día2_Ejercicio6\.xlsx/ }));
+    await waitFor(() => expect(descargarReporte).toHaveBeenCalledWith('picking', 'Día2_Ejercicio6', {}));
+    expect(await screen.findByText(/Descargado Día2_Ejercicio6\.xlsx/)).toBeTruthy();
   });
 });

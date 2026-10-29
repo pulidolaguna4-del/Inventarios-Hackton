@@ -12,6 +12,8 @@ import * as maqueta from './maqueta.js';
 import * as maestro from './maestro.js';
 import * as pedidos from './pedidos.js';
 import * as picking from './picking.js';
+import * as reportes from './reportes.js';
+import { crearXlsx } from './reporteExcel.js';
 import * as robot from './robot.js';
 import {
   CANTIDAD_SORTEO_POR_DEFECTO,
@@ -23,6 +25,8 @@ import {
   COLUMNAS_LISTA_DESPACHO,
   DIR_SALIDAS,
   ESTADOS_PEDIDO,
+  FORMATOS_EXPORTACION,
+  TIPO_CONTENIDO_EXPORTACION,
   ORIGENES_PICKING,
   RUTA_ESTADOS_PEDIDOS,
   RUTA_MAESTRO,
@@ -357,13 +361,63 @@ async function filasParaExportar(tipo, consulta) {
   }
 }
 
-/** Guarda el CSV en salidas/ y lo descarga (?nombre=Día2_Ejercicio6). */
+/** Hojas del reporte en Excel del tipo pedido (con formato, colores y totales). */
+async function hojasParaExportar(tipo, consulta) {
+  switch (tipo) {
+    case 'maestro':
+      return reportes.hojasMaestro(await maestroActual());
+    case 'picking':
+      return reportes.hojasPicking(picking.pickingTarea6());
+    case 'conteo': {
+      const sorteos = conteo.cargarSorteos(RUTA_SORTEOS);
+      const referencias = await referenciasActuales();
+      return reportes.hojasConteo({
+        sorteos,
+        referencias,
+        registros: conteo.cargarRegistros(RUTA_REGISTROS_CONTEO),
+        verificacion: conteo.verificarSorteos(sorteos, referencias.map((r) => r.sku)),
+        soloSorteo: enteroOpcional(consulta.sorteo, 'sorteo'),
+      });
+    }
+    case 'registros_conteo': {
+      const { filas, columnas } = await filasParaExportar(tipo, consulta);
+      return reportes.hojaTabla({ nombre: 'Registros', titulo: 'Registros de conteo', columnas, filas, alerta: (fila) => fila.diferencia !== 0 });
+    }
+    case 'pedidos': {
+      const { filas, columnas } = await filasParaExportar(tipo, consulta);
+      return reportes.hojaTabla({ nombre: 'Pedidos', titulo: `Pedidos de Arauca del ${consulta.fecha ?? filas[0]?.fecha ?? ''}`, columnas, filas });
+    }
+    default:
+      return filasParaExportar(tipo, consulta); // lanza el 404 del tipo desconocido
+  }
+}
+
+/** Lee ?formato=xlsx|csv (por defecto xlsx). */
+function formatoPedido(valor) {
+  const formato = valor || 'xlsx';
+  if (!FORMATOS_EXPORTACION.includes(formato)) {
+    throw new ErrorApi(400, `Formato desconocido: ${formato}. Opciones: ${FORMATOS_EXPORTACION.join(', ')}`);
+  }
+  return formato;
+}
+
+/**
+ * Guarda el reporte en salidas/ y lo descarga (?nombre=Día2_Ejercicio6). Por defecto es un
+ * .xlsx con formato; con ?formato=csv sale el CSV plano de antes.
+ */
 rutasApi.get('/exportar/:tipo', async (req, res) => {
-  const { filas, columnas } = await filasParaExportar(req.params.tipo, req.query);
-  const ruta = exportar.exportarCsv(req.query.nombre, filas, columnas, DIR_SALIDAS);
+  const formato = formatoPedido(req.query.formato);
+  let ruta;
+  if (formato === 'csv') {
+    const { filas, columnas } = await filasParaExportar(req.params.tipo, req.query);
+    ruta = exportar.exportarCsv(req.query.nombre, filas, columnas, DIR_SALIDAS);
+  } else {
+    const hojas = await hojasParaExportar(req.params.tipo, req.query);
+    ruta = exportar.exportarXlsx(req.query.nombre, crearXlsx(hojas), DIR_SALIDAS);
+  }
   // res.download() pone su propio respaldo "D?a2_..."; por eso el encabezado se arma aparte.
   res.set('Content-Disposition', exportar.encabezadoDescarga(path.basename(ruta)));
-  res.sendFile(ruta, { headers: { 'Content-Type': 'text/csv; charset=utf-8' } });
+  res.sendFile(ruta, { headers: { 'Content-Type': TIPO_CONTENIDO_EXPORTACION[formato] } });
 });
 
 /** Cualquier otra ruta de /api no existe. */

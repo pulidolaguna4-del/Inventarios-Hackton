@@ -1,19 +1,26 @@
 // Exportaciones a CSV. Los archivos quedan en salidas/; los de entrega se nombran Día<N>_Ejercicio<N>.csv.
 
 import path from 'node:path';
-import { guardarCsv } from './datos.js';
+import { escribirAtomico, guardarCsv } from './datos.js';
 import { periodoDeSorteo } from './conteo.js';
 import { DIR_SALIDAS, PATRON_NOMBRE_ARCHIVO, PERIODOS_CONTEO } from './config.js';
 
-/** Devuelve el nombre sin espacios ni '.csv'; lanza error si tiene caracteres no permitidos. */
+/** Devuelve el nombre sin espacios ni extensión (.csv o .xlsx); lanza error si tiene caracteres no permitidos. */
 export function validarNombreArchivo(nombre) {
   // NFC: la "í" de "Día" siempre queda como un solo carácter, venga como venga.
   let limpio = String(nombre ?? '').normalize('NFC').trim();
-  if (limpio.toLowerCase().endsWith('.csv')) limpio = limpio.slice(0, -4);
+  limpio = limpio.replace(/\.(csv|xlsx)$/i, '');
   if (!PATRON_NOMBRE_ARCHIVO.test(limpio)) {
     throw new Error(`El nombre solo puede tener letras, números, _ y - (ej. Día2_Ejercicio6): '${limpio}'`);
   }
   return limpio;
+}
+
+/** Guarda el libro (Buffer de crearXlsx) en <carpeta>/<nombre>.xlsx y devuelve la ruta del archivo. */
+export function exportarXlsx(nombre, libro, carpeta = DIR_SALIDAS) {
+  const ruta = path.join(carpeta, `${validarNombreArchivo(nombre)}.xlsx`);
+  escribirAtomico(ruta, libro);
+  return ruta;
 }
 
 /** Guarda las filas en <carpeta>/<nombre>.csv y devuelve la ruta del archivo. */

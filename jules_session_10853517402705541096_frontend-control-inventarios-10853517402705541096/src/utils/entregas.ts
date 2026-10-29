@@ -2,7 +2,7 @@ import type { TipoExportacion } from '../types/inventario';
 
 /**
  * Archivos de entrega según el reglamento. El nombre debe ser exactamente este: si no sigue
- * la estructura Día<N>_Ejercicio<N>, el jurado no lo califica. Se descarga como <nombre>.csv.
+ * la estructura Día<N>_Ejercicio<N>, el jurado no lo califica. Se descarga como <nombre>.xlsx.
  */
 export const ARCHIVOS_ENTREGA: { tipo: TipoExportacion; nombre: string; titulo: string; descripcion: string }[] = [
   { tipo: 'maestro', nombre: 'Día2_Ejercicio1', titulo: 'Maestro de ubicaciones · Tarea 1', descripcion: 'SKU, popularidad, clase ABC y ubicación asignada.' },

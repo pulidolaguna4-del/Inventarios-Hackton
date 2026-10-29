@@ -43,7 +43,7 @@ export const Informes: React.FC = () => {
   const descargar = async (tipo: TipoExportacion, nombre: string, extra: Record<string, string | undefined> = {}) => {
     setDescargando(nombre);
     try {
-      const archivo = await api.descargarCsv(tipo, nombre, extra);
+      const archivo = await api.descargarReporte(tipo, nombre, extra);
       setAviso({ tipo: 'exito', texto: `Descargado ${archivo}. También quedó guardado en la carpeta salidas/ del backend.` });
     } catch (e) {
       setAviso({ tipo: 'error', texto: e instanceof Error ? e.message : String(e) });
@@ -135,7 +135,7 @@ export const Informes: React.FC = () => {
                 <FileSpreadsheet className="w-4 h-4" />
                 {archivo.titulo.toUpperCase()}
               </span>
-              <span className="titulo-senal text-2xl normal-case">{archivo.nombre}.csv</span>
+              <span className="titulo-senal text-2xl normal-case">{archivo.nombre}.xlsx</span>
               <span className="text-xs text-[#b5b0a4]">{archivo.descripcion}</span>
               <span className="mt-1 flex items-center gap-1.5 text-xs font-bold text-senal">
                 <Download className="w-4 h-4" />

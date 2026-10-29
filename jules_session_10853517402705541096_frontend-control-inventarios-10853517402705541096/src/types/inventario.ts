@@ -272,6 +272,9 @@ export interface ResultadoPicking {
 
 export type TipoExportacion = 'maestro' | 'conteo' | 'registros_conteo' | 'pedidos' | 'picking';
 
+/** .xlsx con formato (por defecto) o el CSV plano. */
+export type FormatoExportacion = 'xlsx' | 'csv';
+
 // ---------------------------------------------------------------------------
 // Mapa 3D: layout, trazado de los recorridos e instrucciones del robot
 // ---------------------------------------------------------------------------

@@ -273,8 +273,8 @@ function celdaCsv(valor) {
   return texto;
 }
 
-/** Escribe en un temporal de la misma carpeta y luego lo renombra a `ruta`. */
-function escribirAtomico(ruta, contenido) {
+/** Escribe texto o un Buffer en un temporal de la misma carpeta y luego lo renombra a `ruta`. */
+export function escribirAtomico(ruta, contenido) {
   fs.mkdirSync(path.dirname(ruta), { recursive: true });
   const rutaTemporal = `${ruta}.${process.pid}.tmp`;
   try {
