@@ -89,3 +89,11 @@ test('lote de pedidos: consolida por SKU y separa los que no tienen ubicación',
   assert.equal(lote.lista.length, 1);
   assert.equal(lote.lista[0].cantidad, 3);
 });
+
+test('el CSV de la Tarea 6 lleva la salida, el total de cada recorrido y el más demorado', async () => {
+  const { filasDespacho } = await import('../src/exportar.js');
+  const filas = filasDespacho(resultado);
+  assert.equal(filas.length, resultado.lista.length);
+  assert.ok(filas.every((f) => f.salida === 'DER' && f.tiempo_recorrido_s > 0));
+  assert.equal(new Set(filas.filter((f) => f.es_el_mas_demorado).map((f) => f.recorrido)).size, 1);
+});

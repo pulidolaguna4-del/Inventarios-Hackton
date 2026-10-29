@@ -344,11 +344,14 @@ async function filasParaExportar(tipo, consulta) {
       return { filas, columnas: COLUMNAS_EXPORTAR_SORTEOS };
     }
     case 'registros_conteo':
-      return { filas: conteo.cargarRegistros(RUTA_REGISTROS_CONTEO), columnas: COLUMNAS_EXPORTAR_REGISTROS_CONTEO };
+      return {
+        filas: exportar.filasRegistros(conteo.cargarRegistros(RUTA_REGISTROS_CONTEO), await referenciasActuales()),
+        columnas: COLUMNAS_EXPORTAR_REGISTROS_CONTEO,
+      };
     case 'pedidos':
       return { filas: (await listarPedidos(consulta)).pedidos, columnas: COLUMNAS_EXPORTAR_PEDIDOS };
     case 'picking':
-      return { filas: picking.pickingTarea6().lista, columnas: COLUMNAS_LISTA_DESPACHO };
+      return { filas: exportar.filasDespacho(picking.pickingTarea6()), columnas: COLUMNAS_LISTA_DESPACHO };
     default:
       throw new ErrorApi(404, `Tipo de exportación desconocido: ${tipo}. Opciones: maestro, conteo (sorteos), registros_conteo, pedidos, picking`);
   }

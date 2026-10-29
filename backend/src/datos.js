@@ -236,12 +236,14 @@ export function guardarJson(ruta, datos) {
 
 /**
  * Arma el texto CSV de una lista de objetos con las `columnas` en ese orden.
+ * Cada columna es {campo, titulo} (el título es el encabezado) o solo el nombre del campo.
  * Usa punto y coma y BOM UTF-8 para que Excel en español lo abra con tildes.
  */
 export function textoCsv(filas, columnas) {
-  const lineas = [columnas.map(celdaCsv).join(SEPARADOR_CSV)];
+  const definiciones = columnas.map((columna) => (typeof columna === 'string' ? { campo: columna, titulo: columna } : columna));
+  const lineas = [definiciones.map((columna) => celdaCsv(columna.titulo)).join(SEPARADOR_CSV)];
   for (const fila of filas) {
-    lineas.push(columnas.map((columna) => celdaCsv(valorParaCsv(fila[columna]))).join(SEPARADOR_CSV));
+    lineas.push(definiciones.map((columna) => celdaCsv(valorParaCsv(fila[columna.campo]))).join(SEPARADOR_CSV));
   }
   return BOM_UTF8 + lineas.join('\r\n') + '\r\n';
 }
@@ -251,10 +253,17 @@ export function guardarCsv(ruta, filas, columnas) {
   escribirAtomico(ruta, textoCsv(filas, columnas));
 }
 
-/** Prepara un valor para el CSV: listas separadas por coma y vacío en lugar de null. */
+/**
+ * Prepara un valor para que Excel en español lo lea bien: listas separadas por coma,
+ * vacío en lugar de null, Sí/No, decimales con coma (57,6) y fecha y hora sin la "T".
+ */
 function valorParaCsv(valor) {
   if (Array.isArray(valor)) return valor.join(', ');
-  return valor === null || valor === undefined ? '' : valor;
+  if (valor === null || valor === undefined) return '';
+  if (typeof valor === 'boolean') return valor ? 'Sí' : 'No';
+  if (typeof valor === 'number' && !Number.isInteger(valor)) return String(valor).replace('.', ',');
+  if (typeof valor === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(valor)) return valor.replace('T', ' ');
+  return valor;
 }
 
 /** Pone comillas a la celda si trae el separador, comillas o saltos de línea. */

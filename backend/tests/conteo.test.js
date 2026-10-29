@@ -168,3 +168,15 @@ test('con 12 por sorteo cada referencia también termina en exactamente 5', () =
   assert.equal(verificacion.completo, true);
   assert.equal(verificacion.conteos_sorteados, 615);
 });
+
+test('el CSV de sorteos dice el periodo y qué vez es en el año para cada referencia', async () => {
+  const { filasSorteos } = await import('../src/exportar.js');
+  const sorteos = [
+    { numero: 1, fecha_hora: '2026-01-10T08:00:00', skus: [100001, 100002] },
+    { numero: 2, fecha_hora: '2026-03-10T08:00:00', periodo: 2, skus: [100001] },
+  ];
+  const filas = filasSorteos(sorteos, [{ sku: 100001, descripcion: 'Uno' }]);
+  assert.deepEqual(filas.map((f) => [f.sorteo, f.sku, f.veces_en_el_anio]), [[1, 100001, 1], [1, 100002, 1], [2, 100001, 2]]);
+  assert.match(filas[0].periodo, /^1 · /);
+  assert.equal(filasSorteos(sorteos, [], 2)[0].veces_en_el_anio, 2);
+});

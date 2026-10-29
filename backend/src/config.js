@@ -273,24 +273,72 @@ export const BOM_UTF8 = '﻿';
 // Para no permitir rutas raras, el nombre solo puede tener letras, números, _ y -.
 export const PATRON_NOMBRE_ARCHIVO = /^[\p{L}\p{N}_-]+$/u;
 
+// Columnas de cada CSV: `campo` es el dato del JSON y `titulo` el encabezado que se ve en
+// Excel. El orden de la lista es el orden de las columnas.
+// La lista de despacho es la de la Tarea 6: son posiciones sin SKU, por eso no lleva SKU ni cantidad.
 export const COLUMNAS_LISTA_DESPACHO = [
-  'recorrido', 'orden', 'codigo_ubicacion', 'numero_plano', 'nivel', 'sku',
-  'descripcion', 'cantidad', 'pedidos', 'distancia_acum_m', 'tiempo_s',
+  { campo: 'recorrido', titulo: 'Recorrido' },
+  { campo: 'salida', titulo: 'Salida (entra y vuelve)' },
+  { campo: 'orden', titulo: 'Orden de visita' },
+  { campo: 'numero_plano', titulo: 'Posición en el plano' },
+  { campo: 'codigo_ubicacion', titulo: 'Código de ubicación' },
+  { campo: 'nivel', titulo: 'Nivel' },
+  { campo: 'distancia_acum_m', titulo: 'Distancia acumulada en el recorrido (m)' },
+  { campo: 'tiempo_s', titulo: 'Tiempo de recogida (s)' },
+  { campo: 'distancia_recorrido_m', titulo: 'Distancia total del recorrido (m)' },
+  { campo: 'tiempo_recorrido_s', titulo: 'Tiempo total del recorrido (s)' },
+  { campo: 'es_el_mas_demorado', titulo: 'Recorrido más demorado' },
 ];
 export const COLUMNAS_EXPORTAR_MAESTRO = [
-  'sku', 'descripcion', 'categoria', 'popularidad', 'clase_abc', 'porcentaje_acumulado',
-  'codigo_ubicacion', 'numero_plano', 'columna', 'fila', 'nivel', 'distancia_salida_m',
-  'ubicacion_logistica', 'clase_abc_logistica',
+  { campo: 'sku', titulo: 'SKU' },
+  { campo: 'descripcion', titulo: 'Descripción' },
+  { campo: 'categoria', titulo: 'Categoría' },
+  { campo: 'es_nueva', titulo: 'Referencia nueva' },
+  { campo: 'popularidad', titulo: 'Popularidad (líneas de pedido en Arauca)' },
+  { campo: 'clase_abc', titulo: 'Clase ABC' },
+  { campo: 'porcentaje_acumulado', titulo: 'Popularidad acumulada (%)' },
+  { campo: 'codigo_ubicacion', titulo: 'Código de ubicación' },
+  { campo: 'numero_plano', titulo: 'Posición en el plano' },
+  { campo: 'columna', titulo: 'Columna' },
+  { campo: 'fila', titulo: 'Fila' },
+  { campo: 'nivel', titulo: 'Nivel' },
+  { campo: 'distancia_salida_m', titulo: 'Distancia a la salida más cercana (m)' },
+  { campo: 'ubicacion_logistica', titulo: 'Ubicación en la maqueta (logística)' },
+  { campo: 'clase_abc_logistica', titulo: 'Clase ABC según logística' },
 ];
 export const COLUMNAS_EXPORTAR_SORTEOS = [
-  'sorteo', 'fecha_hora', 'sku', 'descripcion', 'categoria', 'clase_abc', 'codigo_ubicacion', 'numero_plano', 'nivel',
+  { campo: 'sorteo', titulo: 'Sorteo' },
+  { campo: 'fecha_hora', titulo: 'Fecha y hora del sorteo' },
+  { campo: 'periodo', titulo: 'Periodo de conteo' },
+  { campo: 'sku', titulo: 'SKU' },
+  { campo: 'descripcion', titulo: 'Descripción' },
+  { campo: 'categoria', titulo: 'Categoría' },
+  { campo: 'clase_abc', titulo: 'Clase ABC' },
+  { campo: 'codigo_ubicacion', titulo: 'Código de ubicación' },
+  { campo: 'numero_plano', titulo: 'Posición en el plano' },
+  { campo: 'nivel', titulo: 'Nivel' },
+  { campo: 'veces_en_el_anio', titulo: 'Vez en el año (de 5)' },
 ];
 export const COLUMNAS_EXPORTAR_REGISTROS_CONTEO = [
-  'fecha', 'responsable', 'sorteo', 'semana', 'sku', 'codigo_ubicacion',
-  'cantidad_sistema', 'cantidad_contada', 'diferencia',
+  { campo: 'fecha', titulo: 'Fecha del conteo' },
+  { campo: 'semana', titulo: 'Semana del año' },
+  { campo: 'sorteo', titulo: 'Sorteo' },
+  { campo: 'responsable', titulo: 'Responsable' },
+  { campo: 'sku', titulo: 'SKU' },
+  { campo: 'descripcion', titulo: 'Descripción' },
+  { campo: 'codigo_ubicacion', titulo: 'Código de ubicación' },
+  { campo: 'cantidad_sistema', titulo: 'Cantidad en sistema' },
+  { campo: 'cantidad_contada', titulo: 'Cantidad contada' },
+  { campo: 'diferencia', titulo: 'Diferencia (contada - sistema)' },
 ];
 export const COLUMNAS_EXPORTAR_PEDIDOS = [
-  'id_pedido', 'fecha', 'cliente', 'referencias', 'unidades', 'estado', 'ultimo_cambio',
+  { campo: 'id_pedido', titulo: 'N.º de pedido' },
+  { campo: 'fecha', titulo: 'Fecha' },
+  { campo: 'cliente', titulo: 'Cliente' },
+  { campo: 'referencias', titulo: 'Referencias distintas' },
+  { campo: 'unidades', titulo: 'Unidades' },
+  { campo: 'estado', titulo: 'Estado' },
+  { campo: 'ultimo_cambio', titulo: 'Último cambio de estado' },
 ];
 
 // ---------------------------------------------------------------------------

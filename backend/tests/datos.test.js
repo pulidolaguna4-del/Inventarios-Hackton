@@ -109,3 +109,14 @@ test('la demanda del entregable de logística es la demanda anual del Excel', ()
   const logistica = maestro.leerLogisticaTarea1();
   for (const producto of productosNuevos) assert.equal(logistica.get(producto.sku).demanda_anual, producto.demanda_anual);
 });
+
+test('el CSV usa los títulos de las columnas y formatea para Excel en español', () => {
+  const columnas = [
+    { campo: 'distancia', titulo: 'Distancia (m)' },
+    { campo: 'nueva', titulo: 'Referencia nueva' },
+    { campo: 'fecha_hora', titulo: 'Fecha y hora' },
+    { campo: 'vacio', titulo: 'Vacío' },
+  ];
+  const texto = datos.textoCsv([{ distancia: 57.6, nueva: true, fecha_hora: '2026-10-29T09:44:29', vacio: null }], columnas);
+  assert.equal(texto, '﻿Distancia (m);Referencia nueva;Fecha y hora;Vacío\r\n57,6;Sí;2026-10-29 09:44:29;\r\n');
+});

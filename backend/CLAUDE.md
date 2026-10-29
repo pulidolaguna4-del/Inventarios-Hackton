@@ -337,6 +337,11 @@ Todas las respuestas son JSON. Los errores se devuelven como `{"error": "mensaje
 | POST | `/api/conteo/reiniciar` | Respalda sorteos y registros y empieza un año nuevo |
 | GET | `/api/exportar/<tipo>?nombre=Día2_Ejercicio6` | Guarda el CSV en `salidas/` y lo descarga. Tipos: `maestro`, `conteo` (los sorteos; opcional `&sorteo=N`), `registros_conteo`, `pedidos` (`&fecha=`), `picking` |
 
+**Formato de los CSV** (`datos.textoCsv`, columnas en `config.js`): cada columna es `{campo, titulo}`, y el título es el encabezado en español que se ve en Excel ("Código de ubicación", "Distancia total del recorrido (m)"…). Los valores se escriben para Excel en español: decimales con coma (`57,6`), `Sí`/`No`, fecha y hora sin la "T" y vacío en lugar de null. Filas enriquecidas en `exportar.js`:
+- `Día2_Ejercicio6` (`filasDespacho`): cada fila trae la salida, la distancia y el tiempo total de su recorrido y si es el más demorado. Sin SKU ni cantidad, porque la Tarea 6 son posiciones sin SKU.
+- `Día2_Ejercicio8` (`filasSorteos`): agrega el periodo ("5 · Oct–Dic") y "Vez en el año (de 5)".
+- Registros de conteo (`filasRegistros`): agrega la descripción.
+
 **Descargas:** `Content-Disposition` lleva `filename*=UTF-8''D%C3%ADa2_...` (nombre exacto con la "í") y un `filename="Dia2_..."` sin tilde solo como respaldo. El nombre se normaliza a NFC. El CSV lleva BOM UTF-8 y `;` (Excel en español). Hay prueba para las dos cosas.
 
 **Nombres de entrega por defecto** (según el reglamento): maestro (Tarea 1) → `Día2_Ejercicio1`, picking (Tarea 6) → `Día2_Ejercicio6`, sorteos de conteo (Tarea 8) → `Día2_Ejercicio8`. El servidor solo exige que el nombre tenga letras, números, `_` o `-`.
