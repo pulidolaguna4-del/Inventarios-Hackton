@@ -7,6 +7,7 @@ import { StatCard } from '../components/ui/StatCard';
 import { Aviso, Cargando, ErrorCarga, EtiquetaSku, type MensajeAviso } from '../components/ui/Estados';
 import { EncabezadoPagina, CLASE_BOTON_SECUNDARIO, CLASE_CAMPO } from '../components/ui/EncabezadoPagina';
 import { useApi } from '../hooks/useApi';
+import { useProgreso } from '../hooks/ProgresoContexto';
 import { api } from '../services/api';
 import type { AvanceSemana, RegistroConteo, ResumenSorteo } from '../types/inventario';
 
@@ -57,6 +58,7 @@ function textoDiferencia(diferencia: number) {
  */
 export const ConteosAnio: React.FC = () => {
   const { datos, cargando, error, recargar } = useApi(cargarAnio);
+  const { recargar: recargarProgreso } = useProgreso();
   const [semanaElegida, setSemanaElegida] = useState<number | null>(null);
   const [periodoElegido, setPeriodoElegido] = useState<number | null>(null);
   const [filtroResponsable, setFiltroResponsable] = useState(TODOS);
@@ -75,7 +77,7 @@ export const ConteosAnio: React.FC = () => {
         tipo: 'exito',
         texto: respuesta.mensaje + (respuesta.respaldos.length ? ` · Respaldos: ${respuesta.respaldos.join(', ')}` : ''),
       });
-      await recargar();
+      await Promise.all([recargar(), recargarProgreso()]);
     } catch (e) {
       setAviso({ tipo: 'error', texto: e instanceof Error ? e.message : String(e) });
     } finally {
@@ -104,7 +106,7 @@ export const ConteosAnio: React.FC = () => {
 
   const columnasRegistro: Column<RegistroConteo>[] = [
     { key: 'fecha', header: 'Fecha' },
-    { key: 'sorteo', header: 'Sorteo', render: (registro) => <Link to={`/?sorteo=${registro.sorteo}`} className="font-semibold text-indigo-600 hover:underline">#{registro.sorteo}</Link> },
+    { key: 'sorteo', header: 'Sorteo', render: (registro) => <Link to={`/sortear?sorteo=${registro.sorteo}`} className="font-semibold text-indigo-600 hover:underline">#{registro.sorteo}</Link> },
     { key: 'sku', header: 'SKU', render: (registro) => <EtiquetaSku sku={registro.sku} /> },
     {
       key: 'codigo_ubicacion',
@@ -155,7 +157,7 @@ export const ConteosAnio: React.FC = () => {
       key: 'abrir',
       header: '',
       render: (sorteo) => (
-        <Link to={`/?sorteo=${sorteo.numero}`} className="text-xs font-bold text-indigo-600 hover:underline">
+        <Link to={`/sortear?sorteo=${sorteo.numero}`} className="text-xs font-bold text-indigo-600 hover:underline">
           Abrir →
         </Link>
       ),
@@ -237,7 +239,7 @@ export const ConteosAnio: React.FC = () => {
               Haz clic en un periodo para ver sus sorteos.
             </p>
           </div>
-          <Link to="/" className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline">
+          <Link to="/sortear" className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline">
             <Shuffle className="w-3.5 h-3.5" />
             Ir a sortear
           </Link>

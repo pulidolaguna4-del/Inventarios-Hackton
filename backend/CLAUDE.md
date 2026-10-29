@@ -36,16 +36,21 @@ El proyecto está en git: **https://github.com/pulidolaguna4-del/Inventarios-Hac
 7. **Cantidad por sorteo: 12, no 56 (28/10/2026).** El 56 no salía de ningún lado y quedó descartado. El modelo correcto son 5 pasadas completas al año sobre todo el universo: 123 × 5 = 615 conteos, que en 52 semanas dan ≈ 12 por semana (`CANTIDAD_SORTEO_POR_DEFECTO = 12`). Se agregaron los **5 periodos de conteo** del plan de logística (Ene–Feb, Mar–Abr, May–Jun, Jul–Sep, Oct–Dic). Cada sorteo pertenece al periodo del mes en que se hizo. Los sorteos que ya existían (1, 2 y 3, de 56, 5 y 40 referencias, todos en Oct–Dic) se conservan; si se quiere empezar limpio con 12, usar "Reiniciar conteo", que respalda todo.
 8. **Entregable de logística recibido (Tarea 1, `trabajo_1_LOGISTICA`).** Su alcance son **solo las 11 referencias nuevas**. Se guardó en `backend/datos/logistica_tarea1.json` y se muestra como **alias**, sin reemplazar nada del sistema (ver "Dos capas de layout" y "Maestro de ubicaciones").
 
-### Pantallas actuales
+### Flujo de uso: 4 pasos (29/10/2026)
 
-| Ruta | Pantalla | Qué hace |
-|---|---|---|
-| `/` (`?sorteo=N`) | Conteo al azar | Responsable, botón "Sortear N al azar", lista del sorteo con "Contar", navegación entre sorteos |
-| `/conteos-anio` | Conteos del año | Indicadores, conteos por semana (52 casillas), lista de sorteos, historial filtrable por responsable, "Reiniciar conteo" |
-| `/referencias` | Referencias | Maestro de 123 referencias: ABC, ubicación e historial de conteos de cada una |
-| `/pedidos` | Pedidos | Pedidos de Arauca por fecha; avanzar estado. **Pendiente de rediseño** (tablero por estado) |
-| `/reportes` | Reportes | Cumplimiento y descargas CSV. **Pendiente de simplificar** |
-| `/picking` | Mapa y carrito (Arduino) | Mapa 3D (Arauca o maqueta) con el carrito, línea de tiempo, pasos e instrucciones del robot; la tabla de trayectos queda debajo. **En construcción** (ver "Mapa 3D: trabajo en curso") |
+La barra ya no tiene 6 pestañas sueltas: son **4 pasos numerados** que cuentan una sola historia. Cada paso termina con un botón grande "siguiente" (`components/ui/BotonSiguiente.tsx`) que lleva el contexto en la URL (el número de sorteo).
+
+| Paso | Ruta | Pantalla | Qué hace |
+|---|---|---|---|
+| 1 | `/sortear` (`?sorteo=N`) | Sortear | Responsable, cantidad, "Sortear N al azar", lista del sorteo. *Pendiente de C: quitar "Contar"* |
+| 2 | `/recorrido` (`?origen=sorteo&sorteo=N`) | Recorrido y conteo | Mapa 3D con el carrito. *Pendiente de D: origen, conteo en línea* |
+| 3 | `/inventario` (`?vista=anio`, `?sorteo=N`) | Inventario | Referencias y Conteos del año. *Provisional: `?vista=anio` cambia de pantalla; se unen en E* |
+| 4 | `/informes` | Informes | Indicadores y descargas. *Pendiente de F* |
+
+- `/` queda reservada para una portada futura; por ahora **redirige a `/sortear` conservando la consulta** (`/?sorteo=N` → `/sortear?sorteo=N`).
+- **Rutas viejas** (`components/layout/Redirigir.tsx`, con prueba en Vitest): `/conteos-anio` → `/inventario?vista=anio`, `/referencias` → `/inventario`, `/reportes` → `/informes`, `/picking` → `/recorrido`.
+- `/pedidos` sigue existiendo pero **sale de la barra**. Su único rol: el origen "Pedidos del día" del Paso 2 enlaza ahí para ver el detalle.
+- **Indicador "SEM · SORTEO" de la barra:** antes se pedía el progreso una sola vez al abrir la página, por eso mostraba el sorteo 6 cuando ya existía el 7. Ahora el progreso vive en un contexto (`hooks/ProgresoContexto.tsx`, `useProgreso()`), y las pantallas que sortean, cuentan o reinician llaman a `recargar()`.
 
 ### Preguntas abiertas
 
@@ -335,9 +340,7 @@ Todas las respuestas son JSON. Los errores se devuelven como `{"error": "mensaje
 
 - `src/services/api.ts`: el único lugar que llama al backend; `src/types/inventario.ts` refleja el JSON tal cual (campos en español, snake_case).
 - **Estilo "bodega industrial"** (diseño A del lienzo de Claude Design, 28/10/2026): barra superior oscura (`src/components/layout/Navbar.tsx`) con indicador que se desliza, entrada escalonada y menú desplegable en móvil; títulos en Archivo condensada en mayúsculas (clase `titulo-senal`), cuerpo en IBM Plex Sans y códigos en IBM Plex Mono (fuentes instaladas con `@fontsource`, funcionan sin internet). Colores: papel `#F4F1EA`, tinta `#17181A` y un solo acento naranja `#FF6B2C` (`bg-senal`). En `src/index.css` se **redefinen** las escalas `slate` (grises cálidos) e `indigo` (tinta) y los radios, así que las clases existentes ya toman el estilo; no volver a usar degradados ni tarjetas muy redondeadas.
-- La barra tiene dos grupos:
-  - **INVENTARIO:** Conteo al azar (`/`, `?sorteo=N`: botón "Sortear" con la cantidad editable, lista del sorteo y registro; el responsable se escribe una vez arriba), Conteos del año (`/conteos-anio`: conteos por semana en 52 casillas por trimestre, detalle por semana con responsable, lista de sorteos, historial filtrable por responsable y "Reiniciar conteo"), Referencias (`/referencias`), Pedidos y Reportes.
-  - **ARDUINO:** Mapa y carrito (`/picking`). Se va a reemplazar por un mapa 3D de la bodega (Three.js) con el carrito recorriendo la ruta y las instrucciones para el robot.
+- La barra muestra los **4 pasos** numerados (ver "Flujo de uso: 4 pasos"), con el mismo indicador que se desliza; ya no hay rótulos de grupo INVENTARIO / ARDUINO.
 - Las rutas sin extensión las devuelve Express como `index.html` para que las maneje React Router.
 - `Modal.tsx` se monta con `createPortal` en `document.body` (ver decisión 6). La animación `.pagina-entrar` de `<main>` deja un `transform` que rompe `position: fixed`.
 

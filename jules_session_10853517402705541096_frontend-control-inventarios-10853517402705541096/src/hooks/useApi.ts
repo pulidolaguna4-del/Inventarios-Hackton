@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-interface EstadoCarga<T> {
+export interface EstadoCarga<T> {
   datos: T | null;
   cargando: boolean;
   error: string | null;

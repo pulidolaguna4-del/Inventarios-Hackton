@@ -22,6 +22,7 @@ import {
   CLASE_CAMPO,
 } from '../components/ui/EncabezadoPagina';
 import { useApi } from '../hooks/useApi';
+import { useProgreso } from '../hooks/ProgresoContexto';
 import { api, ErrorApi } from '../services/api';
 import type { ReferenciaSorteo } from '../types/inventario';
 
@@ -63,7 +64,7 @@ function formatearFechaHora(fechaHora: string): string {
  */
 export const ConteoAlAzar: React.FC = () => {
   const [parametros, setParametros] = useSearchParams();
-  const progreso = useApi(api.obtenerProgresoConteo);
+  const progreso = useProgreso();
   const sorteoActual = progreso.datos?.sorteo_actual ?? null;
   const numeroSorteo = Number(parametros.get('sorteo')) || sorteoActual;
   const lista = useApi(
@@ -363,7 +364,7 @@ export const ConteoAlAzar: React.FC = () => {
                   </span>
                 )}
               </span>
-              <Link to="/conteos-anio" className="flex items-center gap-1 text-indigo-600 hover:underline">
+              <Link to="/inventario?vista=anio" className="flex items-center gap-1 text-indigo-600 hover:underline">
                 <CalendarRange className="w-3.5 h-3.5" />
                 Ver todo el año
               </Link>

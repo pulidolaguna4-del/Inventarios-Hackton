@@ -1,46 +1,68 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
+import { Redirigir } from './components/layout/Redirigir';
 import { ConteoAlAzar } from './pages/ConteoAlAzar';
 import { ConteosAnio } from './pages/ConteosAnio';
 import { Referencias } from './pages/Referencias';
 import { Pedidos } from './pages/Pedidos';
 import { Reportes } from './pages/Reportes';
-import { useApi } from './hooks/useApi';
-import { api } from './services/api';
+import { ProveedorProgreso, useProgreso } from './hooks/ProgresoContexto';
 import { Cargando } from './components/ui/Estados';
 
 // El mapa 3D (three.js) se carga aparte, solo al abrir esa pantalla.
 const Picking = lazy(() => import('./pages/Picking').then((modulo) => ({ default: modulo.Picking })));
 
-export function App() {
+/** Paso 3 (provisional hasta unir las dos vistas): ?vista=anio muestra los conteos del año. */
+function Inventario() {
+  const [parametros] = useSearchParams();
+  return parametros.get('vista') === 'anio' ? <ConteosAnio /> : <Referencias />;
+}
+
+function Rutas() {
   // La semana actual y el último sorteo salen del backend; si falla, se muestra "sin conexión".
-  const { datos: progreso, error } = useApi(api.obtenerProgresoConteo);
+  const { datos: progreso, error } = useProgreso();
 
   return (
+    <Layout
+      semanaActual={progreso?.semana_actual ?? null}
+      sorteoActual={progreso?.sorteo_actual ?? null}
+      conectado={error === null}
+    >
+      <Routes>
+        {/* / queda para una portada; por ahora lleva al Paso 1. */}
+        <Route path="/" element={<Redirigir to="/sortear" />} />
+        <Route path="/sortear" element={<ConteoAlAzar />} />
+        <Route
+          path="/recorrido"
+          element={
+            <Suspense fallback={<Cargando texto="Cargando el mapa 3D..." />}>
+              <Picking />
+            </Suspense>
+          }
+        />
+        <Route path="/inventario" element={<Inventario />} />
+        <Route path="/informes" element={<Reportes />} />
+        {/* Fuera de la barra: se abre desde el origen "Pedidos del día" del Paso 2. */}
+        <Route path="/pedidos" element={<Pedidos />} />
+
+        {/* Rutas viejas, para no romper enlaces guardados. */}
+        <Route path="/conteos-anio" element={<Redirigir to="/inventario" extra={{ vista: 'anio' }} />} />
+        <Route path="/referencias" element={<Redirigir to="/inventario" />} />
+        <Route path="/reportes" element={<Redirigir to="/informes" />} />
+        <Route path="/picking" element={<Redirigir to="/recorrido" />} />
+        <Route path="*" element={<Navigate to="/sortear" replace />} />
+      </Routes>
+    </Layout>
+  );
+}
+
+export function App() {
+  return (
     <BrowserRouter>
-      <Layout
-        semanaActual={progreso?.semana_actual ?? null}
-        sorteoActual={progreso?.sorteo_actual ?? null}
-        conectado={error === null}
-      >
-        <Routes>
-          <Route path="/" element={<ConteoAlAzar />} />
-          <Route path="/conteos-anio" element={<ConteosAnio />} />
-          <Route path="/referencias" element={<Referencias />} />
-          <Route path="/pedidos" element={<Pedidos />} />
-          <Route path="/reportes" element={<Reportes />} />
-          <Route
-            path="/picking"
-            element={
-              <Suspense fallback={<Cargando texto="Cargando el mapa 3D..." />}>
-                <Picking />
-              </Suspense>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
+      <ProveedorProgreso>
+        <Rutas />
+      </ProveedorProgreso>
     </BrowserRouter>
   );
 }

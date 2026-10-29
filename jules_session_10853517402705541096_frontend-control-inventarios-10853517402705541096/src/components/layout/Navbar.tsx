@@ -8,39 +8,37 @@ interface NavbarProps {
   conectado: boolean;
 }
 
-// Las dos partes del proyecto: el sistema de inventarios y el robot Arduino.
+// El flujo de uso en 4 pasos: sortear qué contar, recorrer y contar, ver el inventario
+// y sacar los informes. /pedidos sigue existiendo, pero se abre desde el Paso 2.
 const RUTAS_MENU = [
-  { to: '/', grupo: 'INVENTARIO', label: 'Conteo al azar' },
-  { to: '/conteos-anio', grupo: 'INVENTARIO', label: 'Conteos del año' },
-  { to: '/referencias', grupo: 'INVENTARIO', label: 'Referencias' },
-  { to: '/pedidos', grupo: 'INVENTARIO', label: 'Pedidos' },
-  { to: '/reportes', grupo: 'INVENTARIO', label: 'Reportes' },
-  { to: '/picking', grupo: 'ARDUINO', label: 'Mapa y carrito' },
+  { to: '/sortear', paso: 1, label: 'Sortear' },
+  { to: '/recorrido', paso: 2, label: 'Recorrido y conteo' },
+  { to: '/inventario', paso: 3, label: 'Inventario' },
+  { to: '/informes', paso: 4, label: 'Informes' },
 ];
 
 /** Índice de la opción que corresponde a la ruta actual (-1 si ninguna). */
 function indiceActivo(ruta: string): number {
-  return RUTAS_MENU.findIndex((item) => (item.to === '/' ? ruta === '/' : ruta.startsWith(item.to)));
+  return RUTAS_MENU.findIndex((item) => ruta.startsWith(item.to));
 }
 
 /**
- * Barra superior: marca, las seis secciones con un indicador que se desliza hasta
- * la sección activa, la semana y el sorteo actuales y el estado de conexión.
- * En pantallas pequeñas las secciones se abren desde un botón de menú.
+ * Barra superior: marca, los cuatro pasos con un indicador que se desliza hasta
+ * el paso activo, la semana y el sorteo actuales y el estado de conexión.
+ * En pantallas pequeñas los pasos se abren desde un botón de menú.
  */
 export const Navbar: React.FC<NavbarProps> = ({ semanaActual, sorteoActual, conectado }) => {
   const { pathname } = useLocation();
   const [menuAbierto, setMenuAbierto] = useState(false);
   const activo = indiceActivo(pathname);
 
-  const colorGrupo = (grupo: string, esActivo: boolean) =>
-    grupo === 'ARDUINO' ? 'text-senal' : esActivo ? 'text-[#b5b0a4]' : 'text-[#8e897d]';
+  const colorPaso = (esActivo: boolean) => (esActivo ? 'text-senal' : 'text-[#8e897d]');
 
   return (
     <header className="sticky top-0 z-30 bg-tinta text-papel border-b-[3px] border-senal">
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 h-[68px] flex items-center gap-7">
         {/* Marca */}
-        <NavLink to="/" className="flex items-center gap-2.5 shrink-0 text-papel no-underline">
+        <NavLink to="/sortear" className="flex items-center gap-2.5 shrink-0 text-papel no-underline">
           <span className="titulo-senal flex items-center justify-center w-[34px] h-[34px] bg-senal text-tinta text-[15px]">CA</span>
           <span className="flex flex-col leading-tight">
             <span className="titulo-senal text-[17px] tracking-[0.04em]">Centauros</span>
@@ -49,20 +47,19 @@ export const Navbar: React.FC<NavbarProps> = ({ semanaActual, sorteoActual, cone
         </NavLink>
 
         {/* Secciones (escritorio) */}
-        <nav aria-label="Principal" className="hidden lg:grid relative flex-1 grid-cols-6 h-[68px]">
+        <nav aria-label="Principal" className="hidden lg:grid relative flex-1 grid-cols-4 h-[68px]">
           {RUTAS_MENU.map((item, indice) => {
             const esActivo = indice === activo;
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.to === '/'}
-                className={`nav-item relative flex flex-col items-center justify-center gap-0.5 px-1.5 text-sm font-semibold whitespace-nowrap ${
+                className={`nav-item relative flex items-center justify-center gap-2 px-1.5 text-sm font-semibold whitespace-nowrap ${
                   esActivo ? 'text-white' : 'text-[#b5b0a4]'
                 }`}
                 style={{ animationDelay: `${indice * 0.04}s` }}
               >
-                <span className={`font-mono text-[10px] tracking-[0.12em] ${colorGrupo(item.grupo, esActivo)}`}>{item.grupo}</span>
+                <span className={`titulo-senal text-[15px] ${colorPaso(esActivo)}`}>{item.paso}</span>
                 <span>{item.label}</span>
                 <span className="nav-rayita absolute left-[22%] right-[22%] bottom-3.5 h-px bg-[#8e897d]" aria-hidden="true" />
               </NavLink>
@@ -110,14 +107,15 @@ export const Navbar: React.FC<NavbarProps> = ({ semanaActual, sorteoActual, cone
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/'}
               onClick={() => setMenuAbierto(false)}
               className={`flex items-center justify-between min-h-12 px-2 border-b border-slate-800 text-base font-semibold ${
                 indice === activo ? 'text-white' : 'text-[#b5b0a4]'
               }`}
             >
-              <span>{item.label}</span>
-              <span className={`font-mono text-[11px] ${colorGrupo(item.grupo, indice === activo)}`}>{item.grupo}</span>
+              <span className="flex items-center gap-3">
+                <span className={`titulo-senal text-[15px] ${colorPaso(indice === activo)}`}>{item.paso}</span>
+                {item.label}
+              </span>
             </NavLink>
           ))}
           <span className="flex items-center justify-between pt-3 px-2 font-mono text-xs text-[#b5b0a4]">
