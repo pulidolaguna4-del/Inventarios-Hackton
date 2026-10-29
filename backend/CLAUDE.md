@@ -252,6 +252,9 @@ Fila 9    1   2  35    34  35    36  61
   - Nivel 2: **49, 44, 41**
 - **`lote` — órdenes reales de Arauca del Excel**, para probar con datos de verdad. El lote se elige por **fecha** (≈ 13 órdenes) o por una lista de `id_pedido`.
 - **`manual`**: un pedido armado desde el frontend para pruebas puntuales.
+- **`sorteo` — ruta de conteo.** Las ubicaciones de las referencias del sorteo N (del maestro). Es la "prioridad de conteo": el carrito va a lo que se sorteó. Con 12 por sorteo salen 4 recorridos de 3 y, como son ≤ 12, la ruta es la óptima exacta. Dos referencias en la misma celda y distinto nivel son una sola parada (4T). `cantidad_sistema` de cada parada = la registrada al contar o, si no se ha contado, `stockSimulado(sku)`.
+  - **Supuesto (el caso no lo define):** el tiempo de conteo por parada es el mismo de recogida (nivel 1 = T, nivel 2 = 3T, ambos = 4T).
+- Todas las respuestas traen `origen` y `metodo` (`exacto` o `heuristico`) y `totales.ubicaciones` (paradas), para mostrar en pantalla qué método eligió el sistema según el tamaño.
 
 **Resultado de referencia** de la prueba con los valores por defecto: 3 recorridos y **≈ 174,4 m**. Los grupos óptimos son {4, 7, 60}, {25, 21, 55} y {49, 44, 41}, todos por la salida DER. Si se cambian las constantes de la bodega, este valor cambia y hay que actualizar la prueba.
 
@@ -309,9 +312,10 @@ Todas las respuestas son JSON. Los errores se devuelven como `{"error": "mensaje
 | GET | `/api/resumen` | Totales: referencias, órdenes de Arauca, fechas disponibles |
 | GET | `/api/maestro` | Maestro de ubicaciones; cada referencia trae además `ubicacion_logistica` y `clase_abc_logistica` (null salvo las 11 nuevas) |
 | POST | `/api/maestro/generar` | Recalcula el ABC y las ubicaciones |
-| GET | `/api/picking/prueba` | Lista de despacho de la Tarea 6; con `?con_trazado=true` agrega el trazado de cada recorrido |
+| GET | `/api/picking?origen=prueba\|sorteo\|lote&sorteo=N&fecha=AAAA-MM-DD&con_trazado=true` | Lista de despacho en Arauca. `prueba` = Tarea 6; `sorteo` = ruta de conteo del sorteo N (sin N, el último); `lote` = pedidos de Arauca de la fecha. Cada parada trae `items` con `sku, descripcion, nivel, codigo_ubicacion, cantidad, cantidad_sistema` |
+| GET | `/api/picking/prueba` | Alias de `/api/picking?origen=prueba` (Tarea 6: 3 recorridos, 174,4 m) |
 | GET | `/api/picking/maqueta` | Recorridos del robot en la U (de a 3), con trazado |
-| GET | `/api/picking/instrucciones?vista=maqueta&recorrido=1&escala=20` | Instrucciones del robot (por defecto maqueta, escala de `ESCALA_MAQUETA`) |
+| GET | `/api/picking/instrucciones?vista=maqueta&recorrido=1&escala=20` | Instrucciones del robot (por defecto maqueta, escala de `ESCALA_MAQUETA`). En `vista=arauca` acepta también `origen`, `sorteo` y `fecha`; en la maqueta solo existe `origen=prueba` (otro origen da 400) |
 | GET | `/api/bodega/layout?vista=arauca\|maqueta` | Geometría para el mapa 3D |
 | GET | `/api/pedidos?fecha=AAAA-MM-DD&estado=` | Pedidos con su estado |
 | POST | `/api/pedidos/<id>/estado` | `{"estado":"En entrega"}` |
@@ -322,6 +326,8 @@ Todas las respuestas son JSON. Los errores se devuelven como `{"error": "mensaje
 | GET | `/api/conteo/registros?sku=&sorteo=&semana=` | Historial de conteos, del más reciente al más antiguo |
 | POST | `/api/conteo/reiniciar` | Respalda sorteos y registros y empieza un año nuevo |
 | GET | `/api/exportar/<tipo>?nombre=Día2_Ejercicio6` | Guarda el CSV en `salidas/` y lo descarga. Tipos: `maestro`, `conteo` (los sorteos; opcional `&sorteo=N`), `registros_conteo`, `pedidos` (`&fecha=`), `picking` |
+
+**Descargas:** `Content-Disposition` lleva `filename*=UTF-8''D%C3%ADa2_...` (nombre exacto con la "í") y un `filename="Dia2_..."` sin tilde solo como respaldo. El nombre se normaliza a NFC. El CSV lleva BOM UTF-8 y `;` (Excel en español). Hay prueba para las dos cosas.
 
 **Nombres de entrega por defecto** (según el reglamento): maestro (Tarea 1) → `Día2_Ejercicio1`, picking (Tarea 6) → `Día2_Ejercicio6`, sorteos de conteo (Tarea 8) → `Día2_Ejercicio8`. El servidor solo exige que el nombre tenga letras, números, `_` o `-`.
 

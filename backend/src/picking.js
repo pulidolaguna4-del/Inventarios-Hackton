@@ -113,6 +113,23 @@ export function paradasDesdeItems(items) {
   return [...porCelda.values()];
 }
 
+/**
+ * Arma las paradas de una ruta de conteo: las ubicaciones de las referencias de un sorteo.
+ * Cada fila trae sku, descripcion, codigo_ubicacion y cantidad_sistema. Dos referencias en
+ * la misma celda y distinto nivel quedan en una sola parada (4T), igual que en la Tarea 6.
+ */
+export function paradasDeConteo(filas) {
+  const items = filas.map((fila) => ({
+    sku: fila.sku,
+    descripcion: fila.descripcion ?? '',
+    cantidad: null,
+    pedidos: [],
+    codigo_ubicacion: fila.codigo_ubicacion,
+    cantidad_sistema: fila.cantidad_sistema ?? null,
+  }));
+  return paradasDesdeItems(items);
+}
+
 /** Arma las paradas del pedido de prueba de la Tarea 6 (posiciones sin SKU). */
 export function paradasTarea6(pedido = PEDIDO_TAREA_6) {
   const items = [];
@@ -366,11 +383,29 @@ function resumenRecorrido(numeroRecorrido, ruta) {
     recorrido: numeroRecorrido,
     salida_inicio: ruta.salida_inicio,
     salida_fin: ruta.salida_fin,
-    paradas: ruta.orden.map((p) => ({ numero_plano: p.numero_plano, columna: p.columna, fila: p.fila, niveles: p.niveles })),
+    paradas: ruta.orden.map((p) => ({
+      numero_plano: p.numero_plano,
+      columna: p.columna,
+      fila: p.fila,
+      niveles: p.niveles,
+      items: p.items.map(itemDeParada),
+    })),
     distancia_m: redondear(ruta.distancia),
     tiempo_desplazamiento_s: redondear(tiempoCamino),
     tiempo_recogida_s: redondear(tiempoRecogida),
     tiempo_total_s: redondear(tiempoCamino + tiempoRecogida),
+  };
+}
+
+/** Lo que se muestra de cada producto de una parada (para contar desde el recorrido). */
+function itemDeParada(item) {
+  return {
+    sku: item.sku,
+    descripcion: item.descripcion,
+    nivel: item.nivel,
+    codigo_ubicacion: item.codigo_ubicacion,
+    cantidad: item.cantidad,
+    cantidad_sistema: item.cantidad_sistema ?? null,
   };
 }
 
@@ -405,6 +440,20 @@ export function pickingTarea6() {
   return generarListaDespacho(paradasTarea6());
 }
 
+/** Ruta de conteo de un sorteo: mismas reglas que la Tarea 6 (de a 3, exacto si son <= 12). */
+export function pickingConteo(filas) {
+  return generarListaDespacho(paradasDeConteo(filas));
+}
+
+/**
+ * Lista de despacho de un lote de líneas de pedido (por ejemplo, los pedidos de un día).
+ * Devuelve además `sin_ubicacion`: los SKU que no están en el maestro.
+ */
+export function pickingLote(lineas, ubicacionPorSku) {
+  const { items, sin_ubicacion: sinUbicacion } = ubicarItems(consolidarLote(lineas), ubicacionPorSku);
+  return { ...generarListaDespacho(paradasDesdeItems(items)), sin_ubicacion: sinUbicacion };
+}
+
 // ---------------------------------------------------------------------------
 // Trazado para el mapa 3D y el robot
 // ---------------------------------------------------------------------------
@@ -424,6 +473,7 @@ export function secuenciaRecorrido(recorrido) {
       nivel,
       tiempo_recogida_s: tiempoRecogidaNivel(nivel),
     }));
+    const items = parada.items ?? [];
     secuencia.push({
       tipo: 'parada',
       orden: indice + 1,
@@ -433,6 +483,7 @@ export function secuenciaRecorrido(recorrido) {
       niveles: parada.niveles,
       ubicaciones,
       punto: lugar,
+      items,
       tiempo_recogida_s: ubicaciones.reduce((suma, u) => suma + u.tiempo_recogida_s, 0),
     });
     anterior = lugar;

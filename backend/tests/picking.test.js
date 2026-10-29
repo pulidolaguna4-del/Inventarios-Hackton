@@ -53,3 +53,39 @@ test('con muchas paradas se usa la heurística y ningún grupo pasa de 3', () =>
   assert.ok(lista.recorridos.every((r) => r.paradas.length <= 3));
   assert.equal(lista.recorridos.reduce((suma, r) => suma + r.paradas.length, 0), items.length);
 });
+
+test('ruta de conteo: dos referencias en la misma celda son una parada de 4T y traen lo necesario para contar', () => {
+  const filas = [
+    { sku: 100001, descripcion: 'Uno', codigo_ubicacion: 'C1-F08-N1', cantidad_sistema: 10 },
+    { sku: 100002, descripcion: 'Dos', codigo_ubicacion: 'C1-F08-N2', cantidad_sistema: 7 },
+    { sku: 200001, descripcion: 'Tres', codigo_ubicacion: 'C7-F01-N1', cantidad_sistema: 3 },
+  ];
+  const conteo = picking.pickingConteo(filas);
+  assert.equal(conteo.metodo, 'exacto');
+  assert.equal(conteo.totales.ubicaciones, 2);
+  const parada = conteo.recorridos.flatMap((r) => r.paradas).find((p) => p.columna === 1);
+  assert.deepEqual(parada.niveles, [1, 2]);
+  assert.deepEqual(parada.items.map((i) => [i.sku, i.cantidad_sistema]), [[100001, 10], [100002, 7]]);
+  assert.equal(picking.tiempoRecogidaParada({ items: parada.items }), 4 * TIEMPO_RECOGIDA_NIVEL_1);
+});
+
+test('ruta de conteo de 12 ubicaciones: exacta, de a 3 y con el mismo algoritmo que la Tarea 6', () => {
+  const filas = [];
+  for (let fila = 1; fila <= 6; fila++) for (const columna of [2, 6]) filas.push({ sku: fila * 10 + columna, codigo_ubicacion: `C${columna}-F0${fila}-N1` });
+  const conteo = picking.pickingConteo(filas);
+  assert.equal(conteo.metodo, 'exacto');
+  assert.equal(conteo.recorridos.length, 4);
+  assert.ok(conteo.recorridos.every((r) => r.paradas.length === 3 && r.salida_inicio === r.salida_fin));
+});
+
+test('lote de pedidos: consolida por SKU y separa los que no tienen ubicación', () => {
+  const lineas = [
+    { id_pedido: 1, sku: 100017, cantidad: 2 },
+    { id_pedido: 2, sku: 100017, cantidad: 1 },
+    { id_pedido: 2, sku: 999999, cantidad: 1 },
+  ];
+  const lote = picking.pickingLote(lineas, { 100017: 'C2-F05-N1' });
+  assert.deepEqual(lote.sin_ubicacion, [999999]);
+  assert.equal(lote.lista.length, 1);
+  assert.equal(lote.lista[0].cantidad, 3);
+});

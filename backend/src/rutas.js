@@ -23,6 +23,7 @@ import {
   COLUMNAS_LISTA_DESPACHO,
   DIR_SALIDAS,
   ESTADOS_PEDIDO,
+  ORIGENES_PICKING,
   RUTA_ESTADOS_PEDIDOS,
   RUTA_MAESTRO,
   RUTA_REGISTROS_CONTEO,
@@ -66,17 +67,19 @@ function enteroOpcional(valor, nombre) {
   return Number(valor);
 }
 
+/** Valida ?fecha=AAAA-MM-DD; sin fecha devuelve la primera con pedidos de Arauca. */
+function fechaDePedidos(ventas, fecha) {
+  if (!fecha) return datos.lineasDeCiudad(ventas).map((linea) => linea.fecha).sort()[0];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !datos.aFecha(fecha)) {
+    throw new ErrorApi(400, `La fecha debe tener el formato AAAA-MM-DD: ${fecha}`);
+  }
+  return fecha;
+}
+
 /** Pedidos de Arauca de una fecha con su estado (sin fecha, la primera con pedidos). */
 async function listarPedidos(consulta) {
   const { ventas } = await datos.cargarDatos();
-  let fecha = consulta.fecha;
-  if (fecha) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !datos.aFecha(fecha)) {
-      throw new ErrorApi(400, `La fecha debe tener el formato AAAA-MM-DD: ${fecha}`);
-    }
-  } else {
-    fecha = datos.lineasDeCiudad(ventas).map((linea) => linea.fecha).sort()[0];
-  }
+  const fecha = fechaDePedidos(ventas, consulta.fecha);
 
   const estados = pedidos.cargarEstados(RUTA_ESTADOS_PEDIDOS);
   const listado = pedidos.pedidosConEstado(pedidos.agruparPedidos(ventas, undefined, fecha), estados);
@@ -226,9 +229,61 @@ function vistaPedida(valor, porDefecto) {
   return vista;
 }
 
-/** Recorridos de picking de una vista, con su trazado punto por punto. */
-function recorridosConTrazado(vista) {
-  return vista === 'arauca' ? picking.agregarTrazado(picking.pickingTarea6()) : maqueta.pickingMaqueta(maestro.leerLogisticaTarea1());
+/** Lee ?origen=prueba|sorteo|lote (por defecto, el pedido de prueba de la Tarea 6). */
+function origenPedido(valor) {
+  const origen = valor || 'prueba';
+  if (!ORIGENES_PICKING.includes(origen)) {
+    throw new ErrorApi(400, `Origen desconocido: ${origen}. Opciones: ${ORIGENES_PICKING.join(', ')}`);
+  }
+  return origen;
+}
+
+/**
+ * Ruta de conteo de un sorteo (?sorteo=N; sin número, el último). La cantidad en sistema
+ * de cada referencia es la que se registró al contarla o, si no se ha contado, la simulada.
+ */
+async function pickingDeSorteo(consulta) {
+  const sorteos = conteo.cargarSorteos(RUTA_SORTEOS);
+  if (sorteos.length === 0) throw new ErrorApi(400, 'Todavía no hay sorteos de conteo');
+  const numero = enteroOpcional(consulta.sorteo, 'sorteo') ?? sorteos.at(-1).numero;
+  const lista = conteo.referenciasDeSorteo(numero, sorteos, conteo.cargarRegistros(RUTA_REGISTROS_CONTEO), await referenciasActuales());
+  const filas = lista.referencias.map((fila) => ({
+    sku: fila.sku,
+    descripcion: fila.descripcion,
+    codigo_ubicacion: fila.codigo_ubicacion,
+    cantidad_sistema: fila.registro_sorteo?.cantidad_sistema ?? fila.cantidad_sistema_sugerida,
+  }));
+  return { sorteo: numero, ...picking.pickingConteo(filas) };
+}
+
+/** Lista de despacho con todos los pedidos de Arauca de una fecha (?fecha=AAAA-MM-DD). */
+async function pickingDeLote(consulta) {
+  const { ventas } = await datos.cargarDatos();
+  const fecha = fechaDePedidos(ventas, consulta.fecha);
+  const lineas = datos.lineasDeCiudad(ventas).filter((linea) => linea.fecha === fecha);
+  if (lineas.length === 0) throw new ErrorApi(400, `No hay pedidos de Arauca el ${fecha}`);
+  const ubicacionPorSku = Object.fromEntries((await referenciasActuales()).map((r) => [r.sku, r.codigo_ubicacion]));
+  return { fecha, pedidos: new Set(lineas.map((linea) => linea.id_pedido)).size, ...picking.pickingLote(lineas, ubicacionPorSku) };
+}
+
+/** Lista de despacho en la bodega de Arauca según el origen: prueba (Tarea 6), sorteo o lote. */
+async function pickingPorOrigen(consulta) {
+  const origen = origenPedido(consulta.origen);
+  if (origen === 'sorteo') return { origen, ...(await pickingDeSorteo(consulta)) };
+  if (origen === 'lote') return { origen, ...(await pickingDeLote(consulta)) };
+  return { origen, ...picking.pickingTarea6() };
+}
+
+/**
+ * Recorridos de una vista con su trazado punto por punto. La maqueta solo tiene las 11
+ * referencias nuevas, así que allí únicamente existe su propio recorrido.
+ */
+async function recorridosConTrazado(vista, consulta = {}) {
+  if (vista === 'arauca') return picking.agregarTrazado(await pickingPorOrigen(consulta));
+  if (origenPedido(consulta.origen) !== 'prueba') {
+    throw new ErrorApi(400, 'La maqueta solo tiene las 11 referencias nuevas: los orígenes sorteo y lote se ven en la bodega de Arauca');
+  }
+  return maqueta.pickingMaqueta(maestro.leerLogisticaTarea1());
 }
 
 /** Todo lo que el mapa 3D necesita para dibujar una vista (?vista=arauca|maqueta). */
@@ -239,27 +294,33 @@ rutasApi.get('/bodega/layout', async (req, res) => {
 });
 
 /**
- * Trayectos de la Tarea 6 (tiempo de cada trayecto y el más demorado).
+ * Lista de despacho en Arauca: ?origen=prueba|sorteo|lote&sorteo=N&fecha=AAAA-MM-DD.
  * Con ?con_trazado=true cada recorrido trae además su trazado: tramos, paradas y tiempos.
  */
-rutasApi.get('/picking/prueba', (req, res) => {
-  res.json(req.query.con_trazado === 'true' ? recorridosConTrazado('arauca') : picking.pickingTarea6());
-});
+async function responderPicking(consulta, res) {
+  res.json(consulta.con_trazado === 'true' ? await recorridosConTrazado('arauca', consulta) : await pickingPorOrigen(consulta));
+}
+
+rutasApi.get('/picking', (req, res) => responderPicking(req.query, res));
+
+/** Trayectos de la Tarea 6: alias de /picking?origen=prueba. */
+rutasApi.get('/picking/prueba', (req, res) => responderPicking({ ...req.query, origen: 'prueba' }, res));
 
 /** Recorridos del robot en la maqueta en U (las 11 referencias, de a 3), con su trazado. */
-rutasApi.get('/picking/maqueta', (req, res) => {
-  res.json(recorridosConTrazado('maqueta'));
+rutasApi.get('/picking/maqueta', async (req, res) => {
+  res.json(await recorridosConTrazado('maqueta'));
 });
 
 /**
  * Instrucciones para el robot de un recorrido: ?vista=maqueta|arauca&recorrido=N&escala=20.
- * Por defecto la maqueta, que es lo que el robot recorre físicamente.
+ * Por defecto la maqueta, que es lo que el robot recorre físicamente. En Arauca acepta
+ * también origen, sorteo y fecha, para que coincidan con los recorridos del mapa.
  */
-rutasApi.get('/picking/instrucciones', (req, res) => {
+rutasApi.get('/picking/instrucciones', async (req, res) => {
   const vista = vistaPedida(req.query.vista, 'maqueta');
   const escala = robot.validarEscala(req.query.escala ?? ESCALA_MAQUETA);
   const numero = enteroOpcional(req.query.recorrido, 'recorrido') ?? 1;
-  const { recorridos } = recorridosConTrazado(vista);
+  const { recorridos } = await recorridosConTrazado(vista, req.query);
   const recorrido = recorridos.find((r) => r.recorrido === numero);
   if (!recorrido) throw new ErrorApi(400, `El recorrido debe estar entre 1 y ${recorridos.length}: ${numero}`);
   const encabezado = `Recorrido ${numero} · ${vista === 'maqueta' ? 'maqueta' : 'bodega Arauca'}`;
@@ -297,7 +358,9 @@ async function filasParaExportar(tipo, consulta) {
 rutasApi.get('/exportar/:tipo', async (req, res) => {
   const { filas, columnas } = await filasParaExportar(req.params.tipo, req.query);
   const ruta = exportar.exportarCsv(req.query.nombre, filas, columnas, DIR_SALIDAS);
-  res.download(ruta, path.basename(ruta), { headers: { 'Content-Type': 'text/csv; charset=utf-8' } });
+  // res.download() pone su propio respaldo "D?a2_..."; por eso el encabezado se arma aparte.
+  res.set('Content-Disposition', exportar.encabezadoDescarga(path.basename(ruta)));
+  res.sendFile(ruta, { headers: { 'Content-Type': 'text/csv; charset=utf-8' } });
 });
 
 /** Cualquier otra ruta de /api no existe. */

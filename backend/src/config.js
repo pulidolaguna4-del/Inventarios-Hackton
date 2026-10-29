@@ -196,6 +196,11 @@ export const FACTOR_NIVEL_2 = 3; // recoger en nivel 2 tarda 3T; ambos niveles, 
 
 // Hasta este número de ubicaciones se busca el óptimo exacto; por encima, heurística.
 export const LIMITE_EXACTO = 12;
+// De dónde salen las ubicaciones a visitar en la bodega de Arauca:
+// prueba = Tarea 6, sorteo = ruta de conteo de un sorteo, lote = pedidos de un día.
+// Supuesto: el caso no define un tiempo de conteo; en la ruta de conteo cada parada
+// usa la misma regla de recogida (nivel 1 = T, nivel 2 = 3T, ambos = 4T).
+export const ORIGENES_PICKING = ['prueba', 'sorteo', 'lote'];
 // La heurística recorre la bodega por franjas de este número de filas.
 export const FILAS_POR_ZONA = 3;
 

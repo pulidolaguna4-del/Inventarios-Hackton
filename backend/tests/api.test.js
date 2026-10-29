@@ -105,6 +105,37 @@ test('GET /api/picking/prueba?con_trazado=true trae el trazado y sigue sumando 1
   assert.equal(sinTrazado.cuerpo.recorridos[0].trazado, undefined);
 });
 
+test('GET /api/picking: /picking/prueba es alias de origen=prueba y sigue dando 3 recorridos y 174,4 m', async () => {
+  const alias = await pedir('/picking/prueba');
+  const general = await pedir('/picking?origen=prueba');
+  assert.deepEqual(alias.cuerpo, general.cuerpo);
+  assert.equal(general.cuerpo.totales.recorridos, 3);
+  assert.equal(general.cuerpo.totales.distancia_m, 174.4);
+  assert.equal((await pedir('/picking?origen=otro')).codigo, 400);
+});
+
+test('GET /api/picking?origen=sorteo: la ruta de conteo del último sorteo, de a 3 y con las referencias para contar', async () => {
+  const { cuerpo: progreso } = await pedir('/conteo/progreso');
+  if (progreso.sorteo_actual === null) return;
+  const { codigo, cuerpo } = await pedir('/picking?origen=sorteo&con_trazado=true');
+  assert.equal(codigo, 200);
+  assert.equal(cuerpo.sorteo, progreso.sorteo_actual);
+  assert.ok(cuerpo.recorridos.every((r) => r.paradas.length <= 3 && r.trazado.eventos.length > 0));
+  const { cuerpo: sorteo } = await pedir(`/conteo/sorteo/${cuerpo.sorteo}`);
+  const items = cuerpo.recorridos.flatMap((r) => r.paradas.flatMap((p) => p.items));
+  assert.deepEqual(items.map((i) => i.sku).sort(), sorteo.referencias.map((r) => r.sku).sort());
+  assert.ok(items.every((i) => i.descripcion !== undefined && Number.isInteger(i.cantidad_sistema)));
+  assert.equal((await pedir('/picking/instrucciones?vista=maqueta&origen=sorteo')).codigo, 400);
+});
+
+test('GET /api/picking?origen=lote usa los pedidos de Arauca del día', async () => {
+  const { cuerpo } = await pedir('/picking?origen=lote&fecha=2018-01-02');
+  assert.equal(cuerpo.fecha, '2018-01-02');
+  assert.ok(cuerpo.pedidos > 0);
+  assert.ok(cuerpo.recorridos.every((r) => r.paradas.length <= 3));
+  assert.equal((await pedir('/picking?origen=lote&fecha=2018-13-40')).codigo, 400);
+});
+
 test('GET /api/picking/instrucciones: por defecto maqueta 1:20; la escala llega por la URL', async () => {
   const porDefecto = await pedir('/picking/instrucciones');
   assert.equal(porDefecto.cuerpo.vista, 'maqueta');
@@ -116,4 +147,16 @@ test('GET /api/picking/instrucciones: por defecto maqueta 1:20; la escala llega 
   assert.equal(arauca.cuerpo.recorrido, 3);
   assert.equal((await pedir('/picking/instrucciones?recorrido=9')).codigo, 400);
   assert.equal((await pedir('/picking/instrucciones?escala=0')).codigo, 400);
+});
+
+test('exportar: el archivo se llama exactamente Día2_Ejercicio6.csv, con BOM UTF-8 y punto y coma', async () => {
+  // Llega con la "í" descompuesta (i + tilde combinante) y debe quedar igual a la compuesta.
+  const respuesta = await fetch(`${base}/exportar/picking?nombre=${encodeURIComponent('Día2_Ejercicio6')}`);
+  assert.equal(respuesta.status, 200);
+  const disposicion = respuesta.headers.get('content-disposition');
+  assert.match(disposicion, /filename="Dia2_Ejercicio6\.csv"/);
+  assert.ok(disposicion.includes(`filename*=UTF-8''${encodeURIComponent('Día2_Ejercicio6.csv')}`));
+  const contenido = Buffer.from(await respuesta.arrayBuffer());
+  assert.equal(contenido.subarray(0, 3).toString('hex'), 'efbbbf');
+  assert.ok(contenido.toString('utf8').split('\r\n')[0].includes(';'));
 });
