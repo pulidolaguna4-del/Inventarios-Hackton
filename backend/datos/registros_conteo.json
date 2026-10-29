@@ -42,5 +42,16 @@
     "cantidad_sistema": 9,
     "cantidad_contada": 10,
     "diferencia": 1
+  },
+  {
+    "fecha": "2026-10-29",
+    "responsable": "darwin",
+    "sorteo": 10,
+    "semana": 44,
+    "sku": 400018,
+    "codigo_ubicacion": "C2-F09-N1",
+    "cantidad_sistema": 84,
+    "cantidad_contada": 67,
+    "diferencia": -17
   }
 ]
