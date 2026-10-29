@@ -4,12 +4,12 @@
 
 Backend en **Node.js + Express** y frontend en **React** para la bodega satélite de **Arauca** de *Distribuciones Centauros* (caso de la hackatón). El proyecto tiene dos partes:
 
-1. **Inventarios**: conteo cíclico por **sorteos** (un botón elige N referencias **al azar**, 12 por defecto, y **cada referencia se cuenta exactamente 5 veces al año**, una vez en cada uno de los 5 periodos del plan de logística; al llegar a 5 sale de la lista), registro de quién cuenta, vista anual, pedidos y reportes.
-2. **Arduino**: el picking de la Tarea 6 (recorridos de máximo 3 ubicaciones) que luego ejecuta el robot sobre la maqueta.
+1. **Inventarios**: conteo cíclico por **sorteos** (un botón elige N referencias **al azar**, 12 por defecto, y **cada referencia se cuenta exactamente 5 veces al año**, una vez en cada uno de los 5 periodos del plan de logística; al llegar a 5 sale de la lista), registro de quién cuenta, vista anual e informes.
+2. **Arduino**: el picking de la Tarea 6 (recorridos de máximo 3 ubicaciones) que luego ejecuta el robot sobre la maqueta. El mismo algoritmo arma la ruta de conteo de cada sorteo.
 
 El frontend y el backend se comunican **solo por la API REST** (`/api/...`, JSON).
 
-## Estado actual y decisiones (actualizado 28/10/2026)
+## Estado actual y decisiones (actualizado 29/10/2026)
 
 Resumen para retomar el trabajo, también desde Claude chat. Lo que dice este archivo manda sobre `inventarios/CLAUDE.md` y `Documentacion/CLAUDE.md`, que describen la versión vieja en Python y ya no aplican.
 
@@ -27,13 +27,14 @@ El proyecto está en git: **https://github.com/pulidolaguna4-del/Inventarios-Hac
 ### Decisiones tomadas (en orden)
 
 
-1. **Frontend simplificado.** De 7 pantallas: se quitó el Dashboard y se unieron "Plan de conteo" y "Registro de conteos". Pedidos, Reportes y Picking se conservan, pero hay que rediseñarlos.
+1. **Frontend simplificado.** De 7 pantallas: se quitó el Dashboard y se unieron "Plan de conteo" y "Registro de conteos". El 29/10/2026 se reorganizó en el **flujo de 4 pasos** (decisión 9).
 2. **Backend migrado de Python a Node.js + Express.** Se descartó la regla de "solo librería estándar de Python". Antes del cambio se verificó que las 13 rutas de la API respondían igual en ambas versiones. Picking, maestro y lectura del Excel dan exactamente los mismos resultados (174,4 m; 42 A / 36 B / 45 C; 19.357 líneas).
 3. **Conteo cíclico por sorteos en vez de plan semanal fijo.** Antes: un plan anual generado de una vez (52 semanas de 11 o 12 referencias). Ahora: un **botón "Sortear"** elige N referencias al azar (editable en pantalla) entre las que llevan menos conteos. Ninguna pasa de 5 al año. El plan semanal viejo y sus 3 conteos de prueba quedaron respaldados en `backend/datos/*_respaldo_*.json`.
 4. **Responsable obligatorio en cada conteo.** Se escribe una vez y se guarda en el navegador (`utils/responsable.ts`); el Paso 1 y el Paso 2 usan el mismo.
 5. **Rediseño visual "bodega industrial"** (diseño A del lienzo de Claude Design): barra superior en vez de lateral, con animaciones; fondo papel, tinta y un acento naranja; títulos en Archivo condensada en mayúsculas. Detalle en la sección "Frontend React".
 6. **Modal de "Contar" arreglado con un portal.** Salía muy abajo, fuera de la vista. Causa confirmada en el navegador: `<main class="pagina-entrar">` (animación de entrada con `fill-mode: both`) queda con `transform: matrix(1,0,0,1,0,0)`. Eso lo vuelve el bloque contenedor de los hijos `position: fixed`, y el overlay medía 1780 px en vez de los 900 de la ventana. Arreglo: `Modal.tsx` se monta con `createPortal(…, document.body)`. **Regla:** todo overlay o modal nuevo va con portal.
 7. **Cantidad por sorteo: 12, no 56 (28/10/2026).** El 56 no salía de ningún lado y quedó descartado. El modelo correcto son 5 pasadas completas al año sobre todo el universo: 123 × 5 = 615 conteos, que en 52 semanas dan ≈ 12 por semana (`CANTIDAD_SORTEO_POR_DEFECTO = 12`). Se agregaron los **5 periodos de conteo** del plan de logística (Ene–Feb, Mar–Abr, May–Jun, Jul–Sep, Oct–Dic). Cada sorteo pertenece al periodo del mes en que se hizo. Los sorteos que ya existían (1, 2 y 3, de 56, 5 y 40 referencias, todos en Oct–Dic) se conservan; si se quiere empezar limpio con 12, usar "Reiniciar conteo", que respalda todo.
+9. **Flujo de 4 pasos (29/10/2026).** Sortear → Recorrido y conteo → Inventario → Informes. El carrito recorre las ubicaciones del sorteo (ruta de conteo = "prioridad de conteo", criterio de lógica de optimización del 15 %) y el conteo se hace en esa misma pantalla, sin modal. Detalle en "Flujo de uso: 4 pasos".
 8. **Entregable de logística recibido (Tarea 1, `trabajo_1_LOGISTICA`).** Su alcance son **solo las 11 referencias nuevas**. Se guardó en `backend/datos/logistica_tarea1.json` y se muestra como **alias**, sin reemplazar nada del sistema (ver "Dos capas de layout" y "Maestro de ubicaciones").
 
 ### Flujo de uso: 4 pasos (29/10/2026)
@@ -59,12 +60,17 @@ La barra ya no tiene 6 pestañas sueltas: son **4 pasos numerados** que cuentan 
 - [ ] ¿Se borra `inventarios/` (Python)? Antes hay que mover `inventarios/docs/`.
 - [ ] Mapa 3D: ¿el carrito usa solo los 9 puntos de la Tarea 6 o también pedidos reales? ¿Cuáles son las medidas reales de la maqueta en U de logística (escala en cm para las instrucciones del robot)?
 
-### Próximos pasos (en este orden)
+### Próximos pasos
 
-1. Simplificar **Reportes**: un número grande de cumplimiento y una lista de botones de descarga claros, uno por archivo de entrega.
-2. Rediseñar **Pedidos** como tablero por columnas de estado, con tarjetas y botón "Avanzar".
-3. **Mapa 3D** de la bodega con **Three.js** (decidido: librería real, no SVG). Llevará los racks de 7 columnas × 9 filas × 2 niveles, las cajas por categoría o ABC, **el carrito animado** recorriendo los 3 trayectos de la Tarea 6 con pausas de recogida (T, 3T, 4T) y la lista de instrucciones para el robot Arduino (`avanzar(cm)`, `girarDerecha()`, `recoger(nivel)`…).
-4. Pulir los detalles que conservan el estilo viejo: insignias verdes de clase, botones verdes de "Contar" y las tarjetas de indicadores con iconos en cuadritos.
+Hecho el 29/10/2026: el flujo de 4 pasos (ver arriba). Lo que se había listado antes quedó así:
+- ~~Simplificar Reportes~~ → absorbido por el **Paso 4 (Informes)**.
+- ~~Rediseñar Pedidos como tablero por estado~~ → **cancelado**: no suma puntos en la rúbrica. Pedidos queda fuera de la barra y su único rol es el origen "Pedidos del día" del Paso 2.
+- ~~Mapa 3D~~ → cerrado dentro del **Paso 2** (falta solo la confirmación en el navegador, ver abajo).
+- ~~"Pedidos como entrada del picking"~~ → reemplazado por el origen `lote` ("Pedidos del día") del Paso 2.
+
+Siguiente:
+1. Portada en `/` (hoy redirige a `/sortear`).
+2. **Último pendiente visual, después de los 4 pasos:** pulir lo que conserva el estilo viejo (insignias verdes de clase, pestañas y barras índigo, `rounded-xl/2xl`). No mezclarlo con cambios de lógica.
 
 ### Mapa 3D (cerrado el 29/10/2026, dentro del Paso 2)
 
@@ -229,7 +235,7 @@ Fila 9    1   2  35    34  35    36  61
 
 ## Picking (`src/picking.js`)
 
-> **Estado:** ya están hechos la consolidación, el reparto exacto, la heurística y la lista de despacho (`GET /api/picking/prueba`). La pantalla solo muestra los trayectos de la Tarea 6 y el más demorado. Lo siguiente es el mapa 3D con el carrito (ver "Próximos pasos").
+> **Estado:** hechos la consolidación, el reparto exacto, la heurística, la lista de despacho (`GET /api/picking?origen=...`) y el mapa 3D con el carrito (Paso 2).
 >
 > Decisión abierta para cuando se retome: con `MINIMO_DE_RECORRIDOS = true` (por defecto) la Tarea 6 da 3 recorridos y 174,4 m. Con `false` se permiten recorridos de menos de 3 ubicaciones y da 4 recorridos y 164,8 m.
 >
@@ -250,13 +256,12 @@ Fila 9    1   2  35    34  35    36  61
    - **Heurística si hay > 12:** se ordena por zona (altura de la fila) y por pasillo en serpentina, se corta en bloques de 3 y luego se mejora con intercambios entre grupos mientras la distancia baje.
 4. **Salida:** la lista de despacho con `recorrido, orden, codigo_ubicacion, numero_plano, nivel, sku, descripcion, cantidad, pedidos, distancia_acum_m, tiempo_s`, más los totales.
 
-**Fuentes de pedidos** (las dos usan el mismo algoritmo):
+**Orígenes** (todos usan el mismo algoritmo; `?origen=` en `GET /api/picking`):
 - **`prueba` — Tarea 6 (Gráfica 9), que es lo que evalúan los jurados.** Son 9 ubicaciones fijas sin SKU:
   - Ambos niveles: **4, 25, 60**
   - Nivel 1: **7, 21, 55**
   - Nivel 2: **49, 44, 41**
 - **`lote` — órdenes reales de Arauca del Excel**, para probar con datos de verdad. El lote se elige por **fecha** (≈ 13 órdenes) o por una lista de `id_pedido`.
-- **`manual`**: un pedido armado desde el frontend para pruebas puntuales.
 - **`sorteo` — ruta de conteo.** Las ubicaciones de las referencias del sorteo N (del maestro). Es la "prioridad de conteo": el carrito va a lo que se sorteó. Con 12 por sorteo salen 4 recorridos de 3 y, como son ≤ 12, la ruta es la óptima exacta. Dos referencias en la misma celda y distinto nivel son una sola parada (4T). `cantidad_sistema` de cada parada = la registrada al contar o, si no se ha contado, `stockSimulado(sku)`.
   - **Supuesto (el caso no lo define):** el tiempo de conteo por parada es el mismo de recogida (nivel 1 = T, nivel 2 = 3T, ambos = 4T).
 - Todas las respuestas traen `origen` y `metodo` (`exacto` o `heuristico`) y `totales.ubicaciones` (paradas), para mostrar en pantalla qué método eligió el sistema según el tamaño.
@@ -302,7 +307,7 @@ Estados en orden:
 
 `Pendiente` → `En alistamiento` → `Alistado` → `En entrega` → `Entregado`
 
-- Los dos últimos se cambian **a mano con un botón**. Como el picking está pospuesto, por ahora **todos** los avances se hacen a mano con el mismo botón.
+- Todos los avances se hacen **a mano con un botón** en `/pedidos`. La pantalla está fuera de la barra: se abre desde el origen "Pedidos del día" del Paso 2 (`/pedidos?fecha=`).
 - Solo se permite avanzar al estado siguiente; cualquier otra transición devuelve error 400. Un pedido que no es de Arauca da 404.
 - Un pedido sin cambios registrados está `Pendiente`.
 - Cada cambio se guarda en `datos/estados_pedidos.json` con su `fecha_hora`. El formato es `{"<id_pedido>": {"estado", "historial": [{"estado", "fecha_hora"}]}}`.
@@ -342,6 +347,7 @@ Todas las respuestas son JSON. Los errores se devuelven como `{"error": "mensaje
 - **Estilo "bodega industrial"** (diseño A del lienzo de Claude Design, 28/10/2026): barra superior oscura (`src/components/layout/Navbar.tsx`) con indicador que se desliza, entrada escalonada y menú desplegable en móvil; títulos en Archivo condensada en mayúsculas (clase `titulo-senal`), cuerpo en IBM Plex Sans y códigos en IBM Plex Mono (fuentes instaladas con `@fontsource`, funcionan sin internet). Colores: papel `#F4F1EA`, tinta `#17181A` y un solo acento naranja `#FF6B2C` (`bg-senal`). En `src/index.css` se **redefinen** las escalas `slate` (grises cálidos) e `indigo` (tinta) y los radios, así que las clases existentes ya toman el estilo; no volver a usar degradados ni tarjetas muy redondeadas.
 - La barra muestra los **4 pasos** numerados (ver "Flujo de uso: 4 pasos"), con el mismo indicador que se desliza; ya no hay rótulos de grupo INVENTARIO / ARDUINO.
 - Las rutas sin extensión las devuelve Express como `index.html` para que las maneje React Router.
+- Pantallas: `pages/Sortear.tsx`, `Recorrido.tsx`, `Inventario.tsx` (vistas en `components/inventario/`), `Informes.tsx` y `Pedidos.tsx`. Pruebas de pantalla en Vitest junto a cada una (`*.test.tsx`, con la API simulada). Con `cleanup` en `afterEach`, porque Vitest no usa `globals`.
 - `Modal.tsx` se monta con `createPortal` en `document.body` (ver decisión 6). La animación `.pagina-entrar` de `<main>` deja un `transform` que rompe `position: fixed`.
 
 ## Pendientes
@@ -351,3 +357,5 @@ Ver "Preguntas abiertas" y "Próximos pasos" al inicio de este archivo. Además:
 - [x] ~~Ajustar el código de ubicaciones con la propuesta del equipo de logística (Tarea 3).~~ **Resuelto como alias, no como reemplazo**: `ubicacion_logistica` al lado de `codigo_ubicacion` (ver "Dos capas de layout").
 - [x] ~~Recibir el maestro ABC de logística (Tarea 1).~~ **Recibido** (`trabajo_1_LOGISTICA`). Alcance: solo las 11 referencias nuevas. Guardado en `datos/logistica_tarea1.json`.
 - [ ] Validar con el plano que las medidas y las posiciones de las salidas sean correctas.
+- [ ] Confirmar en el navegador el Paso 2: carrito siguiendo el trazado, escala de la escena y vista maqueta.
+- [ ] Pulir el estilo viejo (único pendiente visual; va al final, ver "Próximos pasos").
