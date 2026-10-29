@@ -1,21 +1,26 @@
 import React, { useMemo, useState } from 'react';
-import { Package, History, RefreshCw, MapPin, Info } from 'lucide-react';
-import { DataTable, type Column } from '../components/ui/DataTable';
-import { Modal } from '../components/ui/Modal';
-import { BadgeClase } from '../components/ui/Badge';
-import { Aviso, BarraConteos, Cargando, ErrorCarga, EtiquetaSku, type MensajeAviso } from '../components/ui/Estados';
-import { formatearNumero } from '../utils/formato';
-import { EncabezadoPagina, CLASE_BOTON_PRINCIPAL } from '../components/ui/EncabezadoPagina';
-import { useApi } from '../hooks/useApi';
-import { api } from '../services/api';
-import type { ClaseAbc, ProgresoReferencia, Referencia, RegistroConteo } from '../types/inventario';
+import { History, RefreshCw, MapPin, Info, X } from 'lucide-react';
+import { DataTable, type Column } from '../ui/DataTable';
+import { Modal } from '../ui/Modal';
+import { BadgeClase } from '../ui/Badge';
+import { Aviso, BarraConteos, Cargando, ErrorCarga, EtiquetaSku, type MensajeAviso } from '../ui/Estados';
+import { formatearNumero } from '../../utils/formato';
+import { CLASE_BOTON_PRINCIPAL } from '../ui/EncabezadoPagina';
+import { useApi } from '../../hooks/useApi';
+import { api } from '../../services/api';
+import type { ClaseAbc, ProgresoReferencia, Referencia, RegistroConteo } from '../../types/inventario';
 
 /** Referencia del maestro con su progreso de conteo del año. */
 type FilaReferencia = Referencia & { progreso: ProgresoReferencia | undefined };
 
-async function cargarReferencias() {
-  const [maestro, progreso] = await Promise.all([api.obtenerMaestro(), api.obtenerProgresoConteo()]);
-  return { maestro, progreso };
+/** Maestro y progreso del año; con un sorteo, también lo que se contó en él. */
+async function cargarReferencias(sorteo: number | null) {
+  const [maestro, progreso, delSorteo] = await Promise.all([
+    api.obtenerMaestro(),
+    api.obtenerProgresoConteo(),
+    sorteo ? api.obtenerRegistrosConteo({ sorteo }) : Promise.resolve(null),
+  ]);
+  return { maestro, progreso, registrosSorteo: delSorteo?.registros ?? [] };
 }
 
 const ESTADOS_FILTRO = [
@@ -40,8 +45,18 @@ function cumpleEstado(fila: FilaReferencia, estado: string): boolean {
   }
 }
 
-export const Referencias: React.FC = () => {
-  const { datos, cargando, error, recargar } = useApi(cargarReferencias);
+interface VistaReferenciasProps {
+  /** Si llega, la tabla arranca filtrada en lo que se contó en ese sorteo (?sorteo=N). */
+  sorteo: number | null;
+  alQuitarSorteo: () => void;
+}
+
+/**
+ * Vista "Referencias" del Paso 3: el maestro con ABC, ubicación, conteos X/5 e historial.
+ * Al llegar desde el Paso 2 (?sorteo=N) muestra primero lo que se acaba de contar.
+ */
+export const VistaReferencias: React.FC<VistaReferenciasProps> = ({ sorteo, alQuitarSorteo }) => {
+  const { datos, cargando, error, recargar } = useApi(() => cargarReferencias(sorteo), [sorteo]);
   const [busqueda, setBusqueda] = useState('');
   const [categoria, setCategoria] = useState('ALL');
   const [estado, setEstado] = useState('ALL');
@@ -60,9 +75,12 @@ export const Referencias: React.FC = () => {
 
   const categorias = useMemo(() => Array.from(new Set(filas.map((fila) => fila.categoria))).sort(), [filas]);
 
+  const registroDelSorteo = useMemo(() => new Map((datos?.registrosSorteo ?? []).map((registro) => [registro.sku, registro])), [datos]);
+
   const filtradas = filas.filter((fila) => {
     const texto = busqueda.trim().toLowerCase();
     return (
+      (!sorteo || registroDelSorteo.has(fila.sku)) &&
       (!texto || String(fila.sku).includes(texto) || fila.descripcion.toLowerCase().includes(texto)) &&
       (categoria === 'ALL' || fila.categoria === categoria) &&
       (clase === 'ALL' || fila.clase_abc === clase) &&
@@ -167,6 +185,23 @@ export const Referencias: React.FC = () => {
         <BarraConteos contados={fila.progreso?.contados ?? 0} conDiferencia={fila.progreso?.tiene_diferencia} />
       ),
     },
+    ...(sorteo
+      ? [
+          {
+            key: 'en_sorteo',
+            header: `Sorteo ${sorteo}`,
+            render: (fila: FilaReferencia) => {
+              const registro = registroDelSorteo.get(fila.sku);
+              if (!registro) return <span className="text-xs text-slate-400">—</span>;
+              return (
+                <span className={`font-mono text-xs font-bold ${registro.diferencia === 0 ? 'text-tinta' : 'text-rose-600'}`}>
+                  {registro.cantidad_sistema} → {registro.cantidad_contada} ({registro.diferencia > 0 ? `+${registro.diferencia}` : registro.diferencia})
+                </span>
+              );
+            },
+          },
+        ]
+      : []),
     {
       key: 'acciones',
       header: '',
@@ -183,21 +218,27 @@ export const Referencias: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      <EncabezadoPagina
-        titulo="Referencias"
-        seccion="INVENTARIO / MAESTRO DE UBICACIONES"
-        descripcion="Popularidad (líneas de pedido en Arauca), clasificación ABC, ubicación asignada en la bodega y avance de conteos del año de cada referencia."
-        icono={Package}
-        acciones={
-          <button onClick={recalcularMaestro} disabled={recalculando} className={CLASE_BOTON_PRINCIPAL}>
-            <RefreshCw className={`w-4 h-4 ${recalculando ? 'animate-spin' : ''}`} />
-            Recalcular maestro
-          </button>
-        }
-      />
-
+    <div className="space-y-6">
       <Aviso aviso={aviso} onCerrar={() => setAviso(null)} />
+
+      {sorteo && (
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="flex items-center gap-2 pl-3 pr-1 h-9 bg-tinta text-papel text-xs font-bold">
+            Contadas en el sorteo {sorteo} · {registroDelSorteo.size}
+            <button
+              type="button"
+              onClick={alQuitarSorteo}
+              aria-label="Quitar el filtro del sorteo"
+              className="flex items-center justify-center w-7 h-7 hover:bg-slate-800 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </span>
+          <span className="text-xs text-slate-500">
+            Así quedaron las referencias que se acaban de contar. Quita el filtro para ver las {filas.length}.
+          </span>
+        </div>
+      )}
 
       {/* Criterios y filtro por clase */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 text-xs text-slate-600">
@@ -209,7 +250,11 @@ export const Referencias: React.FC = () => {
             {maestro.criterios.factor_lineas_por_unidad} líneas por unidad. Fuente: {maestro.fuente} ({maestro.generado}).
           </span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button onClick={recalcularMaestro} disabled={recalculando} className={`${CLASE_BOTON_PRINCIPAL} mr-2`}>
+            <RefreshCw className={`w-4 h-4 ${recalculando ? 'animate-spin' : ''}`} />
+            Recalcular maestro
+          </button>
           {(['ALL', 'A', 'B', 'C'] as const).map((opcion) => (
             <button
               key={opcion}
@@ -237,7 +282,7 @@ export const Referencias: React.FC = () => {
         selectedStatus={estado}
         onStatusChange={setEstado}
         pageSize={15}
-        emptyMessage="Ninguna referencia cumple los filtros."
+        emptyMessage={sorteo ? `Todavía no se ha contado nada del sorteo ${sorteo}.` : 'Ninguna referencia cumple los filtros.'}
       />
 
       {/* Historial de conteos de una referencia */}

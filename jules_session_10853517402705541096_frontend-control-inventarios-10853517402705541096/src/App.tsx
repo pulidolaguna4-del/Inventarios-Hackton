@@ -1,10 +1,9 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { Redirigir } from './components/layout/Redirigir';
 import { Sortear } from './pages/Sortear';
-import { ConteosAnio } from './pages/ConteosAnio';
-import { Referencias } from './pages/Referencias';
+import { Inventario } from './pages/Inventario';
 import { Pedidos } from './pages/Pedidos';
 import { Reportes } from './pages/Reportes';
 import { ProveedorProgreso, useProgreso } from './hooks/ProgresoContexto';
@@ -12,12 +11,6 @@ import { Cargando } from './components/ui/Estados';
 
 // El mapa 3D (three.js) se carga aparte, solo al abrir esa pantalla.
 const Recorrido = lazy(() => import('./pages/Recorrido').then((modulo) => ({ default: modulo.Recorrido })));
-
-/** Paso 3 (provisional hasta unir las dos vistas): ?vista=anio muestra los conteos del año. */
-function Inventario() {
-  const [parametros] = useSearchParams();
-  return parametros.get('vista') === 'anio' ? <ConteosAnio /> : <Referencias />;
-}
 
 function Rutas() {
   // La semana actual y el último sorteo salen del backend; si falla, se muestra "sin conexión".

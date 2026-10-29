@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarRange, RotateCcw, ShieldCheck, AlertTriangle, Award, ClipboardList, CheckCircle2, User, Shuffle } from 'lucide-react';
-import { DataTable, type Column } from '../components/ui/DataTable';
-import { Modal } from '../components/ui/Modal';
-import { StatCard } from '../components/ui/StatCard';
-import { Aviso, Cargando, ErrorCarga, EtiquetaSku, type MensajeAviso } from '../components/ui/Estados';
-import { EncabezadoPagina, CLASE_BOTON_SECUNDARIO, CLASE_CAMPO } from '../components/ui/EncabezadoPagina';
-import { useApi } from '../hooks/useApi';
-import { useProgreso } from '../hooks/ProgresoContexto';
-import { api } from '../services/api';
-import type { AvanceSemana, RegistroConteo, ResumenSorteo } from '../types/inventario';
+import { RotateCcw, User, Shuffle } from 'lucide-react';
+import { DataTable, type Column } from '../ui/DataTable';
+import { Modal } from '../ui/Modal';
+import { Aviso, Cargando, ErrorCarga, EtiquetaSku, type MensajeAviso } from '../ui/Estados';
+import { CLASE_BOTON_SECUNDARIO, CLASE_CAMPO } from '../ui/EncabezadoPagina';
+import { useApi } from '../../hooks/useApi';
+import { useProgreso } from '../../hooks/ProgresoContexto';
+import { api } from '../../services/api';
+import type { AvanceSemana, RegistroConteo, ResumenSorteo } from '../../types/inventario';
 
 const SEMANAS_POR_TRIMESTRE = 13;
 const TODOS = 'TODOS';
@@ -53,10 +52,10 @@ function textoDiferencia(diferencia: number) {
 }
 
 /**
- * Vista anual del conteo cíclico: conteos hechos en cada una de las 52 semanas,
- * los sorteos del año, quién contó qué y el historial completo.
+ * Vista "Año" del Paso 3: los 5 periodos, los sorteos del año, los conteos de cada semana,
+ * quién contó qué y el historial completo. Los indicadores y la verificación están en Informes.
  */
-export const ConteosAnio: React.FC = () => {
+export const VistaAnio: React.FC = () => {
   const { datos, cargando, error, recargar } = useApi(cargarAnio);
   const { recargar: recargarProgreso } = useProgreso();
   const [semanaElegida, setSemanaElegida] = useState<number | null>(null);
@@ -91,7 +90,6 @@ export const ConteosAnio: React.FC = () => {
   if (!datos) return null;
 
   const { progreso, registros } = datos;
-  const verificacion = progreso.verificacion;
   const semana = semanaElegida ?? progreso.semana_actual;
   const registrosSemana = registros.filter((registro) => registro.semana === semana);
   const responsables = conteosPorResponsable(registros);
@@ -102,7 +100,6 @@ export const ConteosAnio: React.FC = () => {
       (!soloDiferencias || registro.diferencia !== 0) &&
       (!texto || String(registro.sku).includes(texto)),
   );
-  const conteosConDiferencia = registros.filter((registro) => registro.diferencia !== 0).length;
 
   const columnasRegistro: Column<RegistroConteo>[] = [
     { key: 'fecha', header: 'Fecha' },
@@ -165,69 +162,8 @@ export const ConteosAnio: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      <EncabezadoPagina
-        titulo="Conteos del año"
-        seccion="INVENTARIO / CONTEO CÍCLICO"
-        descripcion="Todo el conteo cíclico de un vistazo: cuántos conteos se hicieron cada semana, los sorteos del año, quién contó cada referencia y si hubo diferencias."
-        icono={CalendarRange}
-        acciones={
-          <button onClick={() => setConfirmarReinicio(true)} className={CLASE_BOTON_SECUNDARIO}>
-            <RotateCcw className="w-4 h-4" />
-            Reiniciar conteo
-          </button>
-        }
-      />
-
+    <div className="space-y-6">
       <Aviso aviso={aviso} onCerrar={() => setAviso(null)} />
-
-      {/* Indicadores del año */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Cumplimiento del año"
-          value={`${progreso.cumplimiento}%`}
-          description={`${progreso.conteos_registrados} de ${progreso.conteos_totales} conteos hechos`}
-          icon={Award}
-          colorTheme="amber"
-        />
-        <StatCard
-          title="Sorteados"
-          value={`${progreso.conteos_sorteados} / ${progreso.conteos_totales}`}
-          description={`${progreso.sorteos.length} sorteos · ${progreso.pendientes_por_contar} por contar`}
-          icon={ClipboardList}
-          colorTheme="indigo"
-        />
-        <StatCard
-          title="Referencias completas"
-          value={`${progreso.referencias_completas} / ${progreso.referencias}`}
-          description={`Ya tienen sus ${progreso.conteos_por_anio} conteos`}
-          icon={CheckCircle2}
-          colorTheme="emerald"
-        />
-        <StatCard
-          title="Con diferencia"
-          value={conteosConDiferencia}
-          description={`${progreso.referencias_con_diferencia} referencias afectadas`}
-          icon={AlertTriangle}
-          colorTheme="rose"
-        />
-      </div>
-
-      <div
-        className={`p-3 rounded-xl border text-xs flex items-start gap-2 ${
-          verificacion.valido ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'
-        }`}
-      >
-        {verificacion.valido ? <ShieldCheck className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
-        <span className="font-medium">
-          {verificacion.valido
-            ? `Verificado: ninguna referencia se repite en un mismo sorteo y ninguna pasa de ${progreso.conteos_por_anio} conteos. ` +
-              (verificacion.completo
-                ? `Las ${verificacion.referencias} referencias ya salieron exactamente ${progreso.conteos_por_anio} veces.`
-                : `Cada referencia ha salido entre ${verificacion.minimo_por_referencia} y ${verificacion.maximo_por_referencia} veces.`)
-            : verificacion.errores.join(' · ')}
-        </span>
-      </div>
 
       {/* Periodos del plan de logística y sus sorteos */}
       <div className="space-y-3">
@@ -239,10 +175,16 @@ export const ConteosAnio: React.FC = () => {
               Haz clic en un periodo para ver sus sorteos.
             </p>
           </div>
-          <Link to="/sortear" className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline">
-            <Shuffle className="w-3.5 h-3.5" />
-            Ir a sortear
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link to="/sortear" className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline">
+              <Shuffle className="w-3.5 h-3.5" />
+              Ir a sortear
+            </Link>
+            <button onClick={() => setConfirmarReinicio(true)} className={CLASE_BOTON_SECUNDARIO}>
+              <RotateCcw className="w-4 h-4" />
+              Reiniciar conteo
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
