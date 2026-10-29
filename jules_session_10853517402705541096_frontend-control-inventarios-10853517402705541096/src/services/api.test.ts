@@ -69,4 +69,18 @@ describe('Cliente de la API del backend', () => {
     expect(ruta).toBe('/api/pedidos/7/estado');
     expect(JSON.parse(opciones.body)).toEqual({ estado: 'En alistamiento' });
   });
+
+  it('pide los recorridos según el origen; la maqueta no lleva origen', async () => {
+    const fetchFalso = simularFetch({ recorridos: [] });
+    await api.obtenerRecorridos({ vista: 'arauca', origen: 'sorteo', sorteo: 7 });
+    await api.obtenerRecorridos({ vista: 'arauca', origen: 'lote', fecha: '2018-01-02' });
+    await api.obtenerRecorridos({ vista: 'maqueta', origen: 'prueba' });
+    await api.obtenerInstruccionesRobot({ vista: 'arauca', origen: 'sorteo', sorteo: 7 }, 2, 20);
+    expect(fetchFalso.mock.calls.map((llamada) => llamada[0])).toEqual([
+      '/api/picking?origen=sorteo&sorteo=7&con_trazado=true',
+      '/api/picking?origen=lote&fecha=2018-01-02&con_trazado=true',
+      '/api/picking/maqueta',
+      '/api/picking/instrucciones?vista=arauca&origen=sorteo&sorteo=7&recorrido=2&escala=20',
+    ]);
+  });
 });

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Truck, ArrowRight, Eye, CalendarDays } from 'lucide-react';
 import { DataTable, type Column } from '../components/ui/DataTable';
 import { Modal } from '../components/ui/Modal';
@@ -12,7 +13,9 @@ import type { EstadoPedido, Pedido } from '../types/inventario';
 
 export const Pedidos: React.FC = () => {
   const resumen = useApi(api.obtenerResumen);
-  const [fechaElegida, setFechaElegida] = useState<string | null>(null);
+  // ?fecha=AAAA-MM-DD llega desde el origen "Pedidos del día" del Paso 2.
+  const [parametros] = useSearchParams();
+  const [fechaElegida, setFechaElegida] = useState<string | null>(parametros.get('fecha'));
   const fecha = fechaElegida ?? resumen.datos?.fechas_disponibles[0];
   const pedidos = useApi(() => (fecha ? api.obtenerPedidos(fecha) : Promise.resolve(null)), [fecha]);
 

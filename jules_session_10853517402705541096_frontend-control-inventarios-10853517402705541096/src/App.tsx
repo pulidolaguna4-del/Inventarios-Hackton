@@ -11,7 +11,7 @@ import { ProveedorProgreso, useProgreso } from './hooks/ProgresoContexto';
 import { Cargando } from './components/ui/Estados';
 
 // El mapa 3D (three.js) se carga aparte, solo al abrir esa pantalla.
-const Picking = lazy(() => import('./pages/Picking').then((modulo) => ({ default: modulo.Picking })));
+const Recorrido = lazy(() => import('./pages/Recorrido').then((modulo) => ({ default: modulo.Recorrido })));
 
 /** Paso 3 (provisional hasta unir las dos vistas): ?vista=anio muestra los conteos del año. */
 function Inventario() {
@@ -37,7 +37,7 @@ function Rutas() {
           path="/recorrido"
           element={
             <Suspense fallback={<Cargando texto="Cargando el mapa 3D..." />}>
-              <Picking />
+              <Recorrido />
             </Suspense>
           }
         />

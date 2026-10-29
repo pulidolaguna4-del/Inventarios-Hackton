@@ -43,7 +43,7 @@ La barra ya no tiene 6 pestañas sueltas: son **4 pasos numerados** que cuentan 
 | Paso | Ruta | Pantalla | Qué hace |
 |---|---|---|---|
 | 1 | `/sortear` (`?sorteo=N`) | Sortear (`pages/Sortear.tsx`) | Responsable, cantidad, "Sortear N al azar", navegación entre sorteos y la lista **de solo lectura** (pendiente / contada, con responsable y diferencia). **Aquí no se cuenta.** Si el último sorteo tiene pendientes, el botón queda deshabilitado con "Termina el sorteo N antes de sortear otro (X pendientes)"; "Sortear de todas formas" (`forzar: true`) es un enlace pequeño con confirmación. Cierra con "Ver recorrido del sorteo N →" (`/recorrido?origen=sorteo&sorteo=N`) |
-| 2 | `/recorrido` (`?origen=sorteo&sorteo=N`) | Recorrido y conteo | Mapa 3D con el carrito. *Pendiente de D: origen, conteo en línea* |
+| 2 | `/recorrido` (`?origen=sorteo\|prueba\|lote&sorteo=N&fecha=`) | Recorrido y conteo (`pages/Recorrido.tsx`) | Selector de origen: **Sorteo N** (por defecto; sin número en la URL, el último), **Pedido de prueba (Tarea 6)** y **Pedidos del día** (fecha + enlace a `/pedidos?fecha=`). Muestra siempre "método: exacto/heurística · N paradas · M recorridos". Mapa 3D, línea de tiempo, cámaras e instrucciones del robot como antes. **Conteo en línea** (pestaña "Conteo" del panel, `components/mapa/PanelConteo.tsx`): referencias en el orden del recorrido, sistema editable, Enter guarda y pasa a la siguiente, diferencia en rojo si ≠ 0, fila de la parada del carrito resaltada (los campos no dependen de la animación). Al completar el sorteo: "Ver cómo quedó el inventario →" (`/inventario?sorteo=N`). En la vista Maqueta, los orígenes sorteo y lote muestran un aviso |
 | 3 | `/inventario` (`?vista=anio`, `?sorteo=N`) | Inventario | Referencias y Conteos del año. *Provisional: `?vista=anio` cambia de pantalla; se unen en E* |
 | 4 | `/informes` | Informes | Indicadores y descargas. *Pendiente de F* |
 
@@ -66,7 +66,7 @@ La barra ya no tiene 6 pestañas sueltas: son **4 pasos numerados** que cuentan 
 3. **Mapa 3D** de la bodega con **Three.js** (decidido: librería real, no SVG). Llevará los racks de 7 columnas × 9 filas × 2 niveles, las cajas por categoría o ABC, **el carrito animado** recorriendo los 3 trayectos de la Tarea 6 con pausas de recogida (T, 3T, 4T) y la lista de instrucciones para el robot Arduino (`avanzar(cm)`, `girarDerecha()`, `recoger(nivel)`…).
 4. Pulir los detalles que conservan el estilo viejo: insignias verdes de clase, botones verdes de "Contar" y las tarjetas de indicadores con iconos en cuadritos.
 
-### Mapa 3D: trabajo en curso (pausado el 28/10/2026)
+### Mapa 3D (cerrado el 29/10/2026, dentro del Paso 2)
 
 Pedido del equipo en 5 pasos. Respaldo antes de empezar: `Documentos/Respaldos-Hackton/proyecto_antes_mapa3d_20261028_1136.zip` (backend y frontend con `node_modules`).
 
@@ -76,15 +76,15 @@ Pedido del equipo en 5 pasos. Respaldo antes de empezar: `Documentos/Respaldos-H
    `GET /api/picking/maqueta` (`src/maqueta.js`): la U como anillo (izquierdo → fondo → derecho → frente), 4 recorridos de máximo 3 en orden del anillo (U01–03, U04–06, U07–09, U10–11), cada uno da la vuelta completa (24 m) en un solo sentido y vuelve a la entrada.
 3. `GET /api/picking/instrucciones?vista=maqueta&recorrido=N&escala=20` (`src/robot.js`): `avanzar(cm)`, `girarDerecha()`, `girarIzquierda()`, `recoger(nivel)`; media vuelta = dos `girarDerecha()`; el redondeo se hace sobre el acumulado para que el total de cm sea exacto; devuelve `texto` y `codigo_arduino` (`{'A', 3.8}, {'R', 1}...`).
 
-**Hecho, sin revisar en el navegador (frontend):**
-4. Dependencias instaladas: `three` 0.186, `@react-three/fiber` 9.8, `@react-three/drei` 10.7, `@types/three`. Archivos: `src/utils/animacion.ts` (+ 7 pruebas en Vitest: la posición del carrito es función pura del tiempo), `src/components/mapa/Escena3D.tsx` (piso, pasillos, cabeceras, salidas, estantes con 3 travesaños, cajas por ABC o categoría, por recoger en amarillo y ya recogidas en tinta, ruta punteada, carrito movido con `useFrame` y el reloj de three, cámaras planta / isométrica / carrito, tooltip con `Html`), `LineaTiempo.tsx` (play/pausa, 1× 2× 4×, barra arrastrable, recorrido 1..N o "todos seguidos") y `PanelRecorrido.tsx` (contadores, lista de pasos con autodesplazamiento, instrucciones con escala editable y botón copiar). `pages/Picking.tsx` reescrita con interruptor Bodega Arauca / Maqueta y la tabla de trayectos debajo; si no hay WebGL muestra un aviso y la tabla. La pantalla se carga aparte (`React.lazy`): `Picking-*.js` pesa 981 KB y el resto sigue en 338 KB.
+**Frontend:**
+4. Dependencias instaladas: `three` 0.186, `@react-three/fiber` 9.8, `@react-three/drei` 10.7, `@types/three`. Archivos: `src/utils/animacion.ts` (+ 7 pruebas en Vitest: la posición del carrito es función pura del tiempo), `src/components/mapa/Escena3D.tsx` (piso, pasillos, cabeceras, salidas, estantes con 3 travesaños, cajas por ABC o categoría, por recoger en amarillo y ya recogidas en tinta, ruta punteada, carrito movido con `useFrame` y el reloj de three, cámaras planta / isométrica / carrito, tooltip con `Html`), `LineaTiempo.tsx` (play/pausa, 1× 2× 4×, barra arrastrable, recorrido 1..N o "todos seguidos") y `PanelRecorrido.tsx` (contadores, lista de pasos con autodesplazamiento, instrucciones con escala editable y botón copiar). `pages/Picking.tsx` (hoy `pages/Recorrido.tsx`) reescrita con interruptor Bodega Arauca / Maqueta y la tabla de trayectos debajo; si no hay WebGL muestra un aviso y la tabla. La pantalla se carga aparte (`React.lazy`): `Recorrido-*.js` pesa ≈ 994 KB y el resto sigue en 338 KB.
    Compila (`tsc`), 14 pruebas de Vitest pasan y el build funciona. Sin texturas, fuentes ni HDR remotos (no se usa `<Text>` ni `<Environment>` de drei).
 
-**Falta al retomar:**
-- [ ] **Revisarlo en el navegador** (no se ha visto todavía): cámaras, escala de la escena, que el carrito siga el trazado, colores y la vista maqueta.
-- [ ] Lint: 6 avisos (no errores). Mover `COLORES_ABC`, `COLORES_CATEGORIA`, `soportaWebGL` y `VELOCIDADES` a un archivo aparte (`only-export-components`); el aviso de `reproduccion` mutada dentro de `useFrame` es intencional (la referencia es el reloj compartido).
-- [ ] Paso 5 está hecho en código (tabla debajo y aviso sin WebGL) pero sin probar con WebGL desactivado.
-- [ ] Actualizar esta sección y la tabla de la API cuando termine.
+**Cierre (29/10/2026):**
+- Visto en el navegador por el equipo: dibuja la bodega, botones de cámara, interruptor ABC/categoría, panel de pasos y campo de escala.
+- Lint en 0: `COLORES_ABC`, `COLORES_CATEGORIA`, `soportaWebGL` y `VELOCIDADES` pasaron a `components/mapa/constantes.ts`. El aviso de `reproduccion` mutada en `useFrame` es intencional (reloj compartido) y quedó con `oxlint-disable-next-line` y su explicación.
+- Sin WebGL: aviso + tabla de trayectos + el conteo funciona igual. Probado en Vitest (`pages/Recorrido.test.tsx`, con `soportaWebGL` en falso).
+- [ ] **Falta confirmar en el navegador:** que el carrito siga el trazado al reproducir, la escala de la escena y la vista maqueta.
 
 ### Dos capas de layout: bodega real y maqueta
 

@@ -1,8 +1,7 @@
 import React from 'react';
 import { Pause, Play, RotateCcw } from 'lucide-react';
 import { formatearTiempo } from '../../utils/animacion';
-
-export const VELOCIDADES = [1, 2, 4];
+import { VELOCIDADES } from './constantes';
 
 interface LineaTiempoProps {
   duracion: number;

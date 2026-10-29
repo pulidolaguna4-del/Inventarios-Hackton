@@ -19,6 +19,7 @@ import type {
   PickingConTrazado,
   InstruccionesRobot,
   VistaMapa,
+  ConsultaRecorridos,
 } from '../types/inventario';
 
 /** Error que devuelve el backend como {"error": "mensaje"} junto con su código HTTP. */
@@ -91,12 +92,21 @@ export const api = {
 
   /** Todo lo que el mapa 3D necesita para dibujar la bodega de Arauca o la maqueta. */
   obtenerLayout: (vista: VistaMapa) => pedirJson<LayoutBodega>(conParametros('/api/bodega/layout', { vista })),
-  /** Recorridos con su trazado punto por punto (Tarea 6 en Arauca, o los de la maqueta). */
-  obtenerRecorridosConTrazado: (vista: VistaMapa) =>
-    pedirJson<PickingConTrazado>(vista === 'arauca' ? '/api/picking/prueba?con_trazado=true' : '/api/picking/maqueta'),
+  /**
+   * Recorridos con su trazado punto por punto. En Arauca según el origen (Tarea 6, ruta de
+   * conteo del sorteo o pedidos del día); la maqueta solo tiene su propio recorrido.
+   */
+  obtenerRecorridos: ({ vista, origen, sorteo, fecha }: ConsultaRecorridos) =>
+    pedirJson<PickingConTrazado>(
+      vista === 'arauca'
+        ? conParametros('/api/picking', { origen, sorteo, fecha, con_trazado: 'true' })
+        : '/api/picking/maqueta',
+    ),
   /** Instrucciones del robot para un recorrido, a escala 1:N (sin escala, la del backend). */
-  obtenerInstruccionesRobot: (vista: VistaMapa, recorrido: number, escala?: number) =>
-    pedirJson<InstruccionesRobot>(conParametros('/api/picking/instrucciones', { vista, recorrido, escala })),
+  obtenerInstruccionesRobot: ({ vista, origen, sorteo, fecha }: ConsultaRecorridos, recorrido: number, escala?: number) =>
+    pedirJson<InstruccionesRobot>(
+      conParametros('/api/picking/instrucciones', vista === 'arauca' ? { vista, origen, sorteo, fecha, recorrido, escala } : { vista, recorrido, escala }),
+    ),
 
   /**
    * Pide el CSV al backend (que también lo guarda en salidas/) y lo descarga en el navegador.

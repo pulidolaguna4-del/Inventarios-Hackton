@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Copy, PackageCheck } from 'lucide-react';
+import { Check, ClipboardCheck, Copy, ListOrdered, PackageCheck } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import { api } from '../../services/api';
-import type { VistaMapa } from '../../types/inventario';
+import type { ConsultaRecorridos } from '../../types/inventario';
 import { formatearTiempo, type EstadoCarrito, type EventoLinea, type LineaDeTiempo } from '../../utils/animacion';
 import { formatearNumero } from '../../utils/formato';
 
@@ -30,25 +30,37 @@ const Contador: React.FC<{ titulo: string; valor: string; detalle?: string }> = 
 );
 
 interface PanelProps {
-  vista: VistaMapa;
+  /** Vista y origen de los recorridos, para pedir las mismas instrucciones del robot. */
+  consulta: ConsultaRecorridos;
   linea: LineaDeTiempo;
   estado: EstadoCarrito | null;
   tiempo: number;
   /** Recorrido del que se muestran las instrucciones del robot. */
   recorridoInstrucciones: number;
+  /** Lista de conteo del sorteo (solo en la ruta de conteo); se muestra en su propia pestaña. */
+  conteo?: React.ReactNode;
+  /** Avance corto para la pestaña, ej. "8/12". */
+  avanceConteo?: string;
 }
 
-/** Panel lateral: contadores vivos, lista de pasos con el actual resaltado e instrucciones del robot. */
-export const PanelRecorrido: React.FC<PanelProps> = ({ vista, linea, estado, tiempo, recorridoInstrucciones }) => {
+type PestanaPanel = 'pasos' | 'conteo';
+
+/**
+ * Panel lateral: contadores vivos, lista de pasos con el actual resaltado (o, en la ruta de
+ * conteo, la pestaña para contar) e instrucciones del robot.
+ */
+export const PanelRecorrido: React.FC<PanelProps> = ({ consulta, linea, estado, tiempo, recorridoInstrucciones, conteo, avanceConteo }) => {
   const contenedor = useRef<HTMLOListElement>(null);
   const indiceActual = estado?.indice ?? 0;
+  const [pestanaElegida, setPestanaElegida] = useState<PestanaPanel>('conteo');
+  const pestana: PestanaPanel = conteo ? pestanaElegida : 'pasos';
 
   // Desplaza la lista para que el paso actual quede a la vista (sin mover la página).
   useEffect(() => {
     const lista = contenedor.current;
     const elemento = lista?.querySelector<HTMLElement>(`[data-indice="${indiceActual}"]`);
     if (lista && elemento) lista.scrollTo({ top: elemento.offsetTop - lista.clientHeight / 2 + elemento.clientHeight / 2, behavior: 'smooth' });
-  }, [indiceActual, linea]);
+  }, [indiceActual, linea, pestana]);
 
   // Instrucciones del robot: la escala llega vacía hasta que el backend responde con la suya.
   // Solo se pide al backend una escala válida; mientras se escribe una inválida se marca el campo.
@@ -60,9 +72,10 @@ export const PanelRecorrido: React.FC<PanelProps> = ({ vista, linea, estado, tie
     const numero = Number(texto);
     if (texto !== '' && Number.isFinite(numero) && numero > 0) setEscalaPedida(numero);
   };
+  const { vista, origen, sorteo, fecha } = consulta;
   const instrucciones = useApi(
-    () => api.obtenerInstruccionesRobot(vista, recorridoInstrucciones, escalaPedida),
-    [vista, recorridoInstrucciones, escalaPedida],
+    () => api.obtenerInstruccionesRobot({ vista, origen, sorteo, fecha }, recorridoInstrucciones, escalaPedida),
+    [vista, origen, sorteo, fecha, recorridoInstrucciones, escalaPedida],
   );
   const escalaMostrada = escalaTexto ?? String(instrucciones.datos?.escala ?? '');
   const [copiado, setCopiado] = useState(false);
@@ -94,46 +107,75 @@ export const PanelRecorrido: React.FC<PanelProps> = ({ vista, linea, estado, tie
         <Contador titulo="PARADAS" valor={`${estado?.paradas_completas ?? 0}/${linea.total_paradas}`} detalle={estado?.en_parada ? 'recogiendo…' : 'visitadas'} />
       </div>
 
-      {/* Pasos del recorrido */}
-      <div className="px-4 pt-3 pb-1 font-mono text-[11px] tracking-[0.1em] text-slate-500">PASOS DEL RECORRIDO</div>
-      <ol ref={contenedor} className="relative max-h-[300px] overflow-y-auto px-2 pb-3">
-        {linea.eventos.map((evento, indice) => {
-          const actual = indice === indiceActual;
-          const hecho = evento.t_fin <= tiempo && !actual;
-          const cambiaRecorrido = indice === 0 || linea.eventos[indice - 1].recorrido !== evento.recorrido;
-          return (
-            <React.Fragment key={indice}>
-              {cambiaRecorrido && (
-                <li className="font-mono text-[11px] font-semibold text-slate-600 px-2 pt-2 pb-1">RECORRIDO {evento.recorrido}</li>
-              )}
-              <li
-                data-indice={indice}
-                className={`flex items-start gap-2 px-2 py-1.5 text-[13px] border-l-[3px] ${
-                  actual ? 'bg-tinta text-papel border-senal' : hecho ? 'text-slate-400 border-transparent' : 'border-transparent'
-                }`}
-              >
-                <span className="font-mono text-[11px] w-10 shrink-0 pt-0.5 tabular-nums opacity-70">{formatearTiempo(evento.t_inicio)}</span>
-                {evento.tipo === 'tramo' ? (
-                  <span>
-                    Avanza <strong>{formatearNumero(evento.distancia_m, 1)} m</strong> {sentidoTramo(evento)} {NOMBRE_TRAMO[evento.tipo_tramo]}
-                  </span>
-                ) : (
-                  <span className="flex flex-col">
-                    <span className="flex items-center gap-1 font-semibold">
-                      <PackageCheck className="w-3.5 h-3.5" /> Recoge en {evento.etiqueta} · {formatearNumero(evento.tiempo_recogida_s, 0)} s
-                    </span>
-                    {evento.ubicaciones.map((u) => (
-                      <span key={u.codigo_ubicacion} className="font-mono text-[11px] opacity-80">
-                        {u.codigo_ubicacion} · nivel {u.nivel} · {formatearNumero(u.tiempo_recogida_s, 0)} s
-                      </span>
-                    ))}
-                  </span>
+      {/* Conteo del sorteo o pasos del recorrido */}
+      {conteo ? (
+        <div className="flex border-b border-slate-200" role="tablist" aria-label="Contenido del panel">
+          {(
+            [
+              ['conteo', `Conteo${avanceConteo ? ` · ${avanceConteo}` : ''}`, ClipboardCheck],
+              ['pasos', 'Pasos del recorrido', ListOrdered],
+            ] as const
+          ).map(([valor, etiqueta, Icono]) => (
+            <button
+              key={valor}
+              type="button"
+              role="tab"
+              aria-selected={pestana === valor}
+              onClick={() => setPestanaElegida(valor)}
+              className={`flex-1 flex items-center justify-center gap-1.5 h-10 text-xs font-bold uppercase tracking-wide cursor-pointer border-b-[3px] ${
+                pestana === valor ? 'border-senal text-tinta bg-white' : 'border-transparent text-slate-500 hover:text-tinta'
+              }`}
+            >
+              <Icono className="w-3.5 h-3.5" />
+              {etiqueta}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="px-4 pt-3 pb-1 font-mono text-[11px] tracking-[0.1em] text-slate-500">PASOS DEL RECORRIDO</div>
+      )}
+      {pestana === 'conteo' ? (
+        conteo
+      ) : (
+        <ol ref={contenedor} className="relative max-h-[300px] overflow-y-auto px-2 pb-3">
+          {linea.eventos.map((evento, indice) => {
+            const actual = indice === indiceActual;
+            const hecho = evento.t_fin <= tiempo && !actual;
+            const cambiaRecorrido = indice === 0 || linea.eventos[indice - 1].recorrido !== evento.recorrido;
+            return (
+              <React.Fragment key={indice}>
+                {cambiaRecorrido && (
+                  <li className="font-mono text-[11px] font-semibold text-slate-600 px-2 pt-2 pb-1">RECORRIDO {evento.recorrido}</li>
                 )}
-              </li>
-            </React.Fragment>
-          );
-        })}
-      </ol>
+                <li
+                  data-indice={indice}
+                  className={`flex items-start gap-2 px-2 py-1.5 text-[13px] border-l-[3px] ${
+                    actual ? 'bg-tinta text-papel border-senal' : hecho ? 'text-slate-400 border-transparent' : 'border-transparent'
+                  }`}
+                >
+                  <span className="font-mono text-[11px] w-10 shrink-0 pt-0.5 tabular-nums opacity-70">{formatearTiempo(evento.t_inicio)}</span>
+                  {evento.tipo === 'tramo' ? (
+                    <span>
+                      Avanza <strong>{formatearNumero(evento.distancia_m, 1)} m</strong> {sentidoTramo(evento)} {NOMBRE_TRAMO[evento.tipo_tramo]}
+                    </span>
+                  ) : (
+                    <span className="flex flex-col">
+                      <span className="flex items-center gap-1 font-semibold">
+                        <PackageCheck className="w-3.5 h-3.5" /> Recoge en {evento.etiqueta} · {formatearNumero(evento.tiempo_recogida_s, 0)} s
+                      </span>
+                      {evento.ubicaciones.map((u) => (
+                        <span key={u.codigo_ubicacion} className="font-mono text-[11px] opacity-80">
+                          {u.codigo_ubicacion} · nivel {u.nivel} · {formatearNumero(u.tiempo_recogida_s, 0)} s
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </li>
+              </React.Fragment>
+            );
+          })}
+        </ol>
+      )}
 
       {/* Instrucciones del robot */}
       <div className="border-t border-slate-200 p-4 flex flex-col gap-2.5">

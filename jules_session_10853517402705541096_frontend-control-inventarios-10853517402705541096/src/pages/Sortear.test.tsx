@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Sortear } from './Sortear';
 import { ProveedorProgreso } from '../hooks/ProgresoContexto';
@@ -51,6 +51,8 @@ vi.mock('../services/api', () => ({
 }));
 
 describe('Paso 1: Sortear', () => {
+  afterEach(cleanup);
+
   it('bloquea el sorteo con pendientes, no tiene "Contar" y lleva al recorrido del sorteo', async () => {
     render(
       <MemoryRouter initialEntries={['/sortear']}>

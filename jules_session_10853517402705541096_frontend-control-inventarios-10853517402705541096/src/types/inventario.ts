@@ -223,11 +223,24 @@ export interface RespuestaPedidos {
 // Picking (informativo)
 // ---------------------------------------------------------------------------
 
+/** De dónde salen las ubicaciones a visitar en Arauca: Tarea 6, ruta de conteo de un sorteo o pedidos de un día. */
+export type OrigenPicking = 'prueba' | 'sorteo' | 'lote';
+
+/** Un producto de una parada. En la Tarea 6 no hay SKU (sku null); en la ruta de conteo trae la cantidad en sistema. */
+export interface ItemParada {
+  sku: number | null;
+  descripcion: string;
+  nivel: number;
+  codigo_ubicacion: string;
+  cantidad: number | null;
+  cantidad_sistema: number | null;
+}
+
 export interface Recorrido {
   recorrido: number;
   salida_inicio: string;
   salida_fin: string;
-  paradas: { numero_plano: number; columna: number; fila: number; niveles: number[] }[];
+  paradas: { numero_plano: number; columna: number; fila: number; niveles: number[]; items: ItemParada[] }[];
   distancia_m: number;
   tiempo_desplazamiento_s: number;
   tiempo_recogida_s: number;
@@ -236,6 +249,7 @@ export interface Recorrido {
 }
 
 export interface ResultadoPicking {
+  origen: OrigenPicking;
   metodo: 'exacto' | 'heuristico';
   recorridos: Recorrido[];
   totales: {
@@ -345,6 +359,8 @@ export interface EventoParada {
   etiqueta: string;
   niveles: number[];
   ubicaciones: UbicacionParada[];
+  /** Productos de la parada (no viene en la maqueta). */
+  items?: ItemParada[];
   punto: Punto;
   tiempo_recogida_s: number;
   distancia_acum_m: number;
@@ -358,7 +374,7 @@ export interface RecorridoConTrazado {
   recorrido: number;
   salida_inicio: string;
   salida_fin: string;
-  paradas: { etiqueta?: string; numero_plano?: number; niveles: number[] }[];
+  paradas: { etiqueta?: string; numero_plano?: number; niveles: number[]; items?: ItemParada[] }[];
   distancia_m: number;
   tiempo_desplazamiento_s: number;
   tiempo_recogida_s: number;
@@ -370,9 +386,26 @@ export interface RecorridoConTrazado {
 }
 
 export interface PickingConTrazado {
+  /** 'exacto' o 'heuristico' en Arauca; la maqueta usa su propio orden ('anillo'). */
   metodo: string;
+  /** Solo en Arauca. */
+  origen?: OrigenPicking;
+  /** Número del sorteo (origen 'sorteo'). */
+  sorteo?: number;
+  /** Fecha y número de pedidos del lote, y los SKU sin ubicación (origen 'lote'). */
+  fecha?: string;
+  pedidos?: number;
+  sin_ubicacion?: number[];
   recorridos: RecorridoConTrazado[];
   totales: ResultadoPicking['totales'];
+}
+
+/** Qué recorridos pedir: la vista y, en Arauca, el origen. */
+export interface ConsultaRecorridos {
+  vista: VistaMapa;
+  origen: OrigenPicking;
+  sorteo?: number;
+  fecha?: string;
 }
 
 export interface InstruccionRobot {

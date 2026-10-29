@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import type { CeldaLayout, LayoutBodega } from '../../types/inventario';
 import { estadoEnTiempo, type LineaDeTiempo } from '../../utils/animacion';
+import { COLORES_ABC, COLORES_CATEGORIA } from './constantes';
 
 // La escena solo dibuja lo que llega del backend (layout y trazado): no sabe medidas de la bodega.
 // Ejes del backend: x a lo ancho, y hacia el fondo, z hacia arriba.
@@ -20,13 +21,6 @@ export interface Reproduccion {
   velocidad: number;
 }
 
-export const COLORES_ABC: Record<string, string> = { A: '#ff6b2c', B: '#4a6fa5', C: '#a8a29e' };
-export const COLORES_CATEGORIA: Record<string, string> = {
-  'Aire acondicionado': '#4a6fa5',
-  'Equipos de audio': '#ff6b2c',
-  'Equipos de cómputo': '#2f9e6e',
-  Refrigeración: '#8e6bbf',
-};
 const COLOR_PENDIENTE = '#facc15';
 const COLOR_VISITADA = '#17181a';
 const COLOR_SIN_DATO = '#d9d4c7';
@@ -204,6 +198,9 @@ const Carrito: React.FC<{
   useFrame((_, delta) => {
     const r = reproduccion.current;
     if (r.reproduciendo) {
+      // Intencional: `reproduccion` es el reloj compartido (una referencia, no estado de React).
+      // La escena lo avanza en cada cuadro y los controles lo leen; así no se re-renderiza 60 veces por segundo.
+      // oxlint-disable-next-line react/immutability
       r.t = Math.min(r.t + delta * r.velocidad, linea.duracion);
       if (r.t >= linea.duracion) {
         r.reproduciendo = false;
@@ -339,13 +336,3 @@ export const Escena3D: React.FC<EscenaProps> = ({ layout, linea, reproduccion, a
     </Canvas>
   );
 };
-
-/** true si el navegador puede dibujar WebGL. */
-export function soportaWebGL(): boolean {
-  try {
-    const lienzo = document.createElement('canvas');
-    return Boolean(window.WebGLRenderingContext && (lienzo.getContext('webgl2') || lienzo.getContext('webgl')));
-  } catch {
-    return false;
-  }
-}
