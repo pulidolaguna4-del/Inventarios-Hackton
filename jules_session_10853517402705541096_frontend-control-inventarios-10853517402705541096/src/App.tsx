@@ -5,7 +5,7 @@ import { Redirigir } from './components/layout/Redirigir';
 import { Sortear } from './pages/Sortear';
 import { Inventario } from './pages/Inventario';
 import { Pedidos } from './pages/Pedidos';
-import { Reportes } from './pages/Reportes';
+import { Informes } from './pages/Informes';
 import { ProveedorProgreso, useProgreso } from './hooks/ProgresoContexto';
 import { Cargando } from './components/ui/Estados';
 
@@ -35,7 +35,7 @@ function Rutas() {
           }
         />
         <Route path="/inventario" element={<Inventario />} />
-        <Route path="/informes" element={<Reportes />} />
+        <Route path="/informes" element={<Informes />} />
         {/* Fuera de la barra: se abre desde el origen "Pedidos del día" del Paso 2. */}
         <Route path="/pedidos" element={<Pedidos />} />
 
