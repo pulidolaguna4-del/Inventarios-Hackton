@@ -31,5 +31,16 @@
     "cantidad_sistema": 42,
     "cantidad_contada": 41,
     "diferencia": -1
+  },
+  {
+    "fecha": "2026-10-29",
+    "responsable": "darwin",
+    "sorteo": 7,
+    "semana": 44,
+    "sku": 100003,
+    "codigo_ubicacion": "C7-F04-N2",
+    "cantidad_sistema": 9,
+    "cantidad_contada": 10,
+    "diferencia": 1
   }
 ]
