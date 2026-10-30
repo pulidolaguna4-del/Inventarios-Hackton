@@ -1,0 +1,57 @@
+[
+  {
+    "fecha": "2026-10-28",
+    "responsable": "darwin funcionar",
+    "sorteo": 1,
+    "semana": 44,
+    "sku": 100005,
+    "codigo_ubicacion": "C1-F06-N1",
+    "cantidad_sistema": 90,
+    "cantidad_contada": 81,
+    "diferencia": -9
+  },
+  {
+    "fecha": "2026-10-28",
+    "responsable": "darwin funcionar",
+    "sorteo": 4,
+    "semana": 44,
+    "sku": 100001,
+    "codigo_ubicacion": "C4-F05-N2",
+    "cantidad_sistema": 86,
+    "cantidad_contada": 80,
+    "diferencia": -6
+  },
+  {
+    "fecha": "2026-10-28",
+    "responsable": "darwin",
+    "sorteo": 6,
+    "semana": 44,
+    "sku": 100002,
+    "codigo_ubicacion": "C1-F05-N2",
+    "cantidad_sistema": 42,
+    "cantidad_contada": 41,
+    "diferencia": -1
+  },
+  {
+    "fecha": "2026-10-29",
+    "responsable": "darwin",
+    "sorteo": 7,
+    "semana": 44,
+    "sku": 100003,
+    "codigo_ubicacion": "C7-F04-N2",
+    "cantidad_sistema": 9,
+    "cantidad_contada": 10,
+    "diferencia": 1
+  },
+  {
+    "fecha": "2026-10-29",
+    "responsable": "darwin",
+    "sorteo": 10,
+    "semana": 44,
+    "sku": 400018,
+    "codigo_ubicacion": "C2-F09-N1",
+    "cantidad_sistema": 84,
+    "cantidad_contada": 67,
+    "diferencia": -17
+  }
+]
