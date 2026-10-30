@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { History, RefreshCw, MapPin, Info, X } from 'lucide-react';
-import { DataTable, type Column } from '../ui/DataTable';
+import { Tabla, type ColumnaTabla } from '../ui/Tabla';
+import { FiltrosTabla } from '../ui/FiltrosTabla';
+import { Insignia } from '../ui/Insignia';
 import { Modal } from '../ui/Modal';
 import { BadgeClase } from '../ui/Badge';
-import { Aviso, BarraConteos, Cargando, ErrorCarga, EtiquetaSku, type MensajeAviso } from '../ui/Estados';
+import { Aviso, BarraConteos, Cargando, ErrorCarga, type MensajeAviso } from '../ui/Estados';
 import { formatearNumero } from '../../utils/formato';
 import { CLASE_BOTON_PRINCIPAL } from '../ui/EncabezadoPagina';
 import { useApi } from '../../hooks/useApi';
@@ -24,10 +26,11 @@ async function cargarReferencias(sorteo: number | null) {
 }
 
 const ESTADOS_FILTRO = [
-  { value: 'EN_LISTA', label: 'En lista (menos de 5)' },
-  { value: 'COMPLETA', label: 'Completas (5/5)' },
-  { value: 'CON_DIFERENCIA', label: 'Con diferencia' },
-  { value: 'NUEVA', label: 'Referencias nuevas' },
+  { valor: 'ALL', texto: 'Todos los estados' },
+  { valor: 'EN_LISTA', texto: 'En lista (menos de 5)' },
+  { valor: 'COMPLETA', texto: 'Completas (5/5)' },
+  { valor: 'CON_DIFERENCIA', texto: 'Con diferencia' },
+  { valor: 'NUEVA', texto: 'Referencias nuevas' },
 ];
 
 function cumpleEstado(fila: FilaReferencia, estado: string): boolean {
@@ -44,6 +47,26 @@ function cumpleEstado(fila: FilaReferencia, estado: string): boolean {
       return true;
   }
 }
+
+/** Columnas del historial de conteos de una referencia (en el modal). */
+const COLUMNAS_HISTORIAL: ColumnaTabla<RegistroConteo>[] = [
+  { clave: 'fecha', titulo: 'Fecha' },
+  { clave: 'sorteo', titulo: 'Sorteo', render: (registro) => `#${registro.sorteo}` },
+  { clave: 'semana', titulo: 'Semana', alinear: 'derecha' },
+  { clave: 'responsable', titulo: 'Responsable' },
+  { clave: 'cantidad_sistema', titulo: 'Sistema', alinear: 'derecha' },
+  { clave: 'cantidad_contada', titulo: 'Contada', alinear: 'derecha' },
+  {
+    clave: 'diferencia',
+    titulo: 'Diferencia',
+    alinear: 'derecha',
+    render: (registro) => (
+      <strong className={registro.diferencia === 0 ? 'text-emerald-700' : 'text-rose-600'}>
+        {registro.diferencia > 0 ? `+${registro.diferencia}` : registro.diferencia}
+      </strong>
+    ),
+  },
+];
 
 interface VistaReferenciasProps {
   /** Si llega, la tabla arranca filtrada en lo que se contó en ese sorteo (?sorteo=N). */
@@ -88,7 +111,8 @@ export const VistaReferencias: React.FC<VistaReferenciasProps> = ({ sorteo, alQu
     );
   });
 
-  const abrirHistorial = async (fila: FilaReferencia) => {
+  // Solo usa setters: es estable y sirve en las columnas memorizadas.
+  const abrirHistorial = useCallback(async (fila: FilaReferencia) => {
     setSeleccionada(fila);
     setHistorial([]);
     try {
@@ -97,7 +121,7 @@ export const VistaReferencias: React.FC<VistaReferenciasProps> = ({ sorteo, alQu
     } catch (e) {
       setAviso({ tipo: 'error', texto: e instanceof Error ? e.message : String(e) });
     }
-  };
+  }, []);
 
   const recalcularMaestro = async () => {
     setRecalculando(true);
@@ -112,110 +136,108 @@ export const VistaReferencias: React.FC<VistaReferenciasProps> = ({ sorteo, alQu
     }
   };
 
+  const columnas = useMemo<ColumnaTabla<FilaReferencia>[]>(
+    () => [
+      { clave: 'sku', titulo: 'SKU', ancho: '7rem', render: (fila) => <span className="tabla-chip">{fila.sku}</span> },
+      {
+        clave: 'descripcion',
+        titulo: 'Descripción',
+        render: (fila) => (
+          <span className="flex flex-col py-1">
+            <span className="flex flex-wrap items-center gap-2 font-semibold">
+              {fila.descripcion}
+              {fila.es_nueva && <Insignia tono="aviso">Nueva</Insignia>}
+            </span>
+            <span className="text-xs opacity-70">{fila.categoria}</span>
+          </span>
+        ),
+      },
+      {
+        clave: 'clase_abc',
+        titulo: 'Clase',
+        render: (fila) => (
+          <span className="flex flex-col items-start gap-1">
+            <BadgeClase clase={fila.clase_abc} />
+            {fila.clase_abc_logistica && (
+              <span className="font-mono text-[11px] opacity-70" title="Clase que asignó el equipo de logística (por unidades de demanda). La del sistema es por líneas de pedido.">
+                Logística: {fila.clase_abc_logistica}
+              </span>
+            )}
+          </span>
+        ),
+      },
+      {
+        clave: 'popularidad',
+        titulo: 'Popularidad',
+        alinear: 'derecha',
+        render: (fila) => (
+          <span title={fila.origen_popularidad === 'proyeccion' ? 'Líneas equivalentes según la demanda proyectada' : 'Líneas de pedido en Arauca'}>
+            {formatearNumero(fila.popularidad)}
+          </span>
+        ),
+      },
+      {
+        clave: 'codigo_ubicacion',
+        titulo: 'Ubicación',
+        render: (fila) => (
+          <span className="flex flex-wrap items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 opacity-50" aria-hidden="true" />
+            <span className="tabla-chip">{fila.codigo_ubicacion}</span>
+            <span className="text-xs opacity-70">(N.º {fila.numero_plano})</span>
+            {fila.ubicacion_logistica && (
+              <span title="Posición en la maqueta del robot según el entregable de logística (Tarea 1)">
+                <Insignia tono="acento">Maqueta {fila.ubicacion_logistica}</Insignia>
+              </span>
+            )}
+          </span>
+        ),
+      },
+      {
+        clave: 'progreso',
+        titulo: 'Conteos del año',
+        render: (fila) => <BarraConteos contados={fila.progreso?.contados ?? 0} conDiferencia={fila.progreso?.tiene_diferencia} />,
+      },
+      ...(sorteo
+        ? [
+            {
+              clave: 'en_sorteo',
+              titulo: `Sorteo ${sorteo}`,
+              render: (fila: FilaReferencia) => {
+                const registro = registroDelSorteo.get(fila.sku);
+                if (!registro) return <span className="text-xs opacity-50">—</span>;
+                return (
+                  <span className={`font-mono text-xs font-bold ${registro.diferencia === 0 ? '' : 'text-rose-600'}`}>
+                    {registro.cantidad_sistema} → {registro.cantidad_contada} ({registro.diferencia > 0 ? `+${registro.diferencia}` : registro.diferencia})
+                  </span>
+                );
+              },
+            },
+          ]
+        : []),
+      {
+        clave: 'acciones',
+        titulo: <span className="sr-only">Acciones</span>,
+        alinear: 'derecha' as const,
+        render: (fila: FilaReferencia) => (
+          <button
+            type="button"
+            onClick={() => abrirHistorial(fila)}
+            className="inline-flex items-center gap-1 h-8 px-3 rounded-full text-xs font-semibold bg-[var(--tabla-chip)] hover:bg-[var(--tabla-hover)] cursor-pointer"
+          >
+            <History className="w-3.5 h-3.5" aria-hidden="true" />
+            Historial
+          </button>
+        ),
+      },
+    ],
+    [sorteo, registroDelSorteo, abrirHistorial],
+  );
+
   if (cargando && !datos) return <Cargando texto="Cargando maestro de referencias..." />;
   if (error) return <ErrorCarga mensaje={error} onReintentar={recargar} />;
   if (!datos) return null;
 
   const { maestro } = datos;
-
-  const columnas: Column<FilaReferencia>[] = [
-    { key: 'sku', header: 'SKU', render: (fila) => <EtiquetaSku sku={fila.sku} /> },
-    {
-      key: 'descripcion',
-      header: 'Descripción',
-      render: (fila) => (
-        <div>
-          <span className="font-semibold text-slate-800">{fila.descripcion}</span>
-          {fila.es_nueva && (
-            <span className="ml-2 text-[10px] font-bold uppercase text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded">
-              Nueva
-            </span>
-          )}
-          <div className="text-xs text-slate-500">{fila.categoria}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'clase_abc',
-      header: 'Clase',
-      render: (fila) => (
-        <div className="flex flex-col items-start gap-1">
-          <BadgeClase clase={fila.clase_abc} />
-          {fila.clase_abc_logistica && (
-            <span className="font-mono text-[11px] text-slate-500" title="Clase que asignó el equipo de logística (por unidades de demanda). La del sistema es por líneas de pedido.">
-              Logística: {fila.clase_abc_logistica}
-            </span>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: 'popularidad',
-      header: 'Popularidad',
-      className: 'text-right',
-      render: (fila) => (
-        <span title={fila.origen_popularidad === 'proyeccion' ? 'Líneas equivalentes según la demanda proyectada' : 'Líneas de pedido en Arauca'}>
-          {formatearNumero(fila.popularidad)}
-        </span>
-      ),
-    },
-    {
-      key: 'codigo_ubicacion',
-      header: 'Ubicación',
-      render: (fila) => (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <MapPin className="w-3.5 h-3.5 text-slate-400" />
-          <span className="font-mono text-xs font-semibold">{fila.codigo_ubicacion}</span>
-          <span className="text-xs text-slate-500">(N.º {fila.numero_plano})</span>
-          {fila.ubicacion_logistica && (
-            <span
-              className="font-mono text-[11px] font-semibold border border-senal text-tinta px-1.5 py-0.5"
-              title="Posición en la maqueta del robot según el entregable de logística (Tarea 1)"
-            >
-              Maqueta {fila.ubicacion_logistica}
-            </span>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: 'progreso',
-      header: 'Conteos del año',
-      render: (fila) => (
-        <BarraConteos contados={fila.progreso?.contados ?? 0} conDiferencia={fila.progreso?.tiene_diferencia} />
-      ),
-    },
-    ...(sorteo
-      ? [
-          {
-            key: 'en_sorteo',
-            header: `Sorteo ${sorteo}`,
-            render: (fila: FilaReferencia) => {
-              const registro = registroDelSorteo.get(fila.sku);
-              if (!registro) return <span className="text-xs text-slate-400">—</span>;
-              return (
-                <span className={`font-mono text-xs font-bold ${registro.diferencia === 0 ? 'text-tinta' : 'text-rose-600'}`}>
-                  {registro.cantidad_sistema} → {registro.cantidad_contada} ({registro.diferencia > 0 ? `+${registro.diferencia}` : registro.diferencia})
-                </span>
-              );
-            },
-          },
-        ]
-      : []),
-    {
-      key: 'acciones',
-      header: '',
-      render: (fila) => (
-        <button
-          onClick={() => abrirHistorial(fila)}
-          className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-lg cursor-pointer"
-        >
-          <History className="w-3.5 h-3.5" />
-          Historial
-        </button>
-      ),
-    },
-  ];
 
   return (
     <div className="space-y-6">
@@ -269,21 +291,34 @@ export const VistaReferencias: React.FC<VistaReferenciasProps> = ({ sorteo, alQu
         </div>
       </div>
 
-      <DataTable
-        columns={columnas}
-        data={filtradas}
-        keyExtractor={(fila) => String(fila.sku)}
-        searchPlaceholder="Buscar por SKU o descripción..."
-        onSearchChange={setBusqueda}
-        categories={categorias}
-        selectedCategory={categoria}
-        onCategoryChange={setCategoria}
-        statuses={ESTADOS_FILTRO}
-        selectedStatus={estado}
-        onStatusChange={setEstado}
-        pageSize={15}
-        emptyMessage={sorteo ? `Todavía no se ha contado nada del sorteo ${sorteo}.` : 'Ninguna referencia cumple los filtros.'}
-      />
+      <div className="space-y-3">
+        <FiltrosTabla
+          busqueda={busqueda}
+          alBuscar={setBusqueda}
+          marcador="Buscar por SKU o descripción..."
+          filtros={[
+            {
+              etiqueta: 'Categoría',
+              valor: categoria,
+              opciones: [{ valor: 'ALL', texto: 'Todas las categorías' }, ...categorias.map((c) => ({ valor: c, texto: c }))],
+              alCambiar: setCategoria,
+            },
+            { etiqueta: 'Estado', valor: estado, opciones: ESTADOS_FILTRO, alCambiar: setEstado },
+          ]}
+          resumen={`${filtradas.length} de ${filas.length} referencias`}
+        />
+        <Tabla
+          etiqueta="Maestro de referencias"
+          columnas={columnas}
+          filas={filtradas}
+          claveFila={(fila) => String(fila.sku)}
+          tonoFila={(fila) => (fila.progreso?.sale_de_la_lista ? 'visitada' : 'normal')}
+          alClicFila={abrirHistorial}
+          altoMaximo="640px"
+          vacio={sorteo ? `Todavía no se ha contado nada del sorteo ${sorteo}.` : 'Ninguna referencia cumple los filtros.'}
+          pie="Clic o Enter en una referencia para ver su historial. En verde, las que ya tienen sus 5 conteos del año."
+        />
+      </div>
 
       {/* Historial de conteos de una referencia */}
       <Modal
@@ -328,34 +363,13 @@ export const VistaReferencias: React.FC<VistaReferenciasProps> = ({ sorteo, alQu
               {historial.length === 0 ? (
                 <p className="text-slate-500">Todavía no tiene conteos registrados.</p>
               ) : (
-                <table className="w-full text-left border border-slate-200 rounded-lg overflow-hidden">
-                  <thead className="bg-slate-100 text-slate-600 uppercase">
-                    <tr>
-                      <th className="p-2">Fecha</th>
-                      <th className="p-2">Sorteo</th>
-                      <th className="p-2">Semana</th>
-                      <th className="p-2">Responsable</th>
-                      <th className="p-2 text-right">Sistema</th>
-                      <th className="p-2 text-right">Contada</th>
-                      <th className="p-2 text-right">Diferencia</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {historial.map((registro) => (
-                      <tr key={`${registro.sorteo}-${registro.fecha}`}>
-                        <td className="p-2">{registro.fecha}</td>
-                        <td className="p-2">#{registro.sorteo}</td>
-                        <td className="p-2">{registro.semana}</td>
-                        <td className="p-2">{registro.responsable}</td>
-                        <td className="p-2 text-right">{registro.cantidad_sistema}</td>
-                        <td className="p-2 text-right">{registro.cantidad_contada}</td>
-                        <td className={`p-2 text-right font-bold ${registro.diferencia === 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {registro.diferencia}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <Tabla
+                  etiqueta="Conteos registrados"
+                  densidad="compacta"
+                  columnas={COLUMNAS_HISTORIAL}
+                  filas={historial}
+                  claveFila={(registro) => `${registro.sorteo}-${registro.fecha}`}
+                />
               )}
             </div>
           </div>

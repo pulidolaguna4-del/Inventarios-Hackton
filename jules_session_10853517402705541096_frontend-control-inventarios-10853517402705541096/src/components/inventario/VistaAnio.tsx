@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RotateCcw, User, Shuffle } from 'lucide-react';
-import { DataTable, type Column } from '../ui/DataTable';
+import { Tabla, type ColumnaTabla } from '../ui/Tabla';
+import { FiltrosTabla } from '../ui/FiltrosTabla';
 import { Modal } from '../ui/Modal';
-import { Aviso, Cargando, ErrorCarga, EtiquetaSku, type MensajeAviso } from '../ui/Estados';
+import { Aviso, Cargando, ErrorCarga, type MensajeAviso } from '../ui/Estados';
 import { CLASE_BOTON_SECUNDARIO, CLASE_CAMPO } from '../ui/EncabezadoPagina';
 import { useApi } from '../../hooks/useApi';
 import { useProgreso } from '../../hooks/ProgresoContexto';
@@ -50,6 +51,71 @@ function textoDiferencia(diferencia: number) {
     </span>
   );
 }
+
+/** Sorteo con el nombre de su periodo (para que las columnas no dependan del componente). */
+type FilaSorteo = ResumenSorteo & { nombre_periodo: string };
+
+const COLUMNAS_SORTEO: ColumnaTabla<FilaSorteo>[] = [
+  { clave: 'numero', titulo: 'Sorteo', render: (sorteo) => <strong>#{sorteo.numero}</strong> },
+  { clave: 'periodo', titulo: 'Periodo', render: (sorteo) => <span className="tabla-chip">P{sorteo.periodo} · {sorteo.nombre_periodo}</span> },
+  { clave: 'fecha_hora', titulo: 'Fecha', render: (sorteo) => <span className="font-mono text-xs">{sorteo.fecha_hora.replace('T', ' ').slice(0, 16)}</span> },
+  {
+    clave: 'avance',
+    titulo: 'Contadas',
+    render: (sorteo) => {
+      const porcentaje = Math.round((100 * sorteo.registrados) / sorteo.tamano);
+      return (
+        <span className="flex items-center gap-2 min-w-[160px]">
+          <span className="flex-1 h-2 bg-[var(--tabla-chip)] rounded-full overflow-hidden">
+            <span className={`block h-full rounded-full ${porcentaje === 100 ? 'bg-emerald-500' : 'bg-[var(--tabla-acento)]'}`} style={{ width: `${porcentaje}%` }} />
+          </span>
+          <span className="text-xs font-semibold tabular-nums">
+            {sorteo.registrados}/{sorteo.tamano}
+          </span>
+        </span>
+      );
+    },
+  },
+  {
+    clave: 'con_diferencia',
+    titulo: 'Con diferencia',
+    alinear: 'derecha',
+    render: (sorteo) => <span className={sorteo.con_diferencia ? 'font-bold text-rose-600' : 'opacity-50'}>{sorteo.con_diferencia}</span>,
+  },
+  {
+    clave: 'abrir',
+    titulo: <span className="sr-only">Abrir</span>,
+    alinear: 'derecha',
+    render: (sorteo) => (
+      <Link to={`/sortear?sorteo=${sorteo.numero}`} className="text-xs font-bold hover:underline">
+        Abrir →
+      </Link>
+    ),
+  },
+];
+
+const COLUMNAS_REGISTRO: ColumnaTabla<RegistroConteo>[] = [
+  { clave: 'fecha', titulo: 'Fecha', render: (registro) => <span className="font-mono text-xs">{registro.fecha}</span> },
+  {
+    clave: 'sorteo',
+    titulo: 'Sorteo',
+    render: (registro) => (
+      <Link to={`/sortear?sorteo=${registro.sorteo}`} className="font-semibold hover:underline">
+        #{registro.sorteo}
+      </Link>
+    ),
+  },
+  { clave: 'sku', titulo: 'SKU', render: (registro) => <span className="tabla-chip">{registro.sku}</span> },
+  { clave: 'codigo_ubicacion', titulo: 'Ubicación', render: (registro) => (registro.codigo_ubicacion ? <span className="tabla-chip">{registro.codigo_ubicacion}</span> : '—') },
+  { clave: 'responsable', titulo: 'Responsable', render: (registro) => <span className="font-semibold">{registro.responsable}</span> },
+  { clave: 'cantidad_sistema', titulo: 'Sistema', alinear: 'derecha' },
+  { clave: 'cantidad_contada', titulo: 'Contada', alinear: 'derecha' },
+  { clave: 'diferencia', titulo: 'Diferencia', alinear: 'derecha', render: (registro) => textoDiferencia(registro.diferencia) },
+];
+
+const COLUMNAS_REGISTRO_CON_SEMANA: ColumnaTabla<RegistroConteo>[] = [{ clave: 'semana', titulo: 'Semana', alinear: 'derecha' }, ...COLUMNAS_REGISTRO];
+
+const claveRegistro = (registro: RegistroConteo) => `${registro.sorteo}-${registro.sku}`;
 
 /**
  * Vista "Año" del Paso 3: los 5 periodos, los sorteos del año, los conteos de cada semana,
@@ -101,65 +167,12 @@ export const VistaAnio: React.FC = () => {
       (!texto || String(registro.sku).includes(texto)),
   );
 
-  const columnasRegistro: Column<RegistroConteo>[] = [
-    { key: 'fecha', header: 'Fecha' },
-    { key: 'sorteo', header: 'Sorteo', render: (registro) => <Link to={`/sortear?sorteo=${registro.sorteo}`} className="font-semibold text-indigo-600 hover:underline">#{registro.sorteo}</Link> },
-    { key: 'sku', header: 'SKU', render: (registro) => <EtiquetaSku sku={registro.sku} /> },
-    {
-      key: 'codigo_ubicacion',
-      header: 'Ubicación',
-      render: (registro) => <span className="font-mono text-xs">{registro.codigo_ubicacion ?? '—'}</span>,
-    },
-    { key: 'responsable', header: 'Responsable', render: (registro) => <span className="font-semibold">{registro.responsable}</span> },
-    { key: 'cantidad_sistema', header: 'Sistema', className: 'text-right' },
-    { key: 'cantidad_contada', header: 'Contada', className: 'text-right' },
-    { key: 'diferencia', header: 'Diferencia', className: 'text-right', render: (registro) => textoDiferencia(registro.diferencia) },
-  ];
-
   const nombrePeriodo = new Map(progreso.periodos.map((periodo) => [periodo.numero, periodo.nombre]));
-  const sorteosVisibles = [...progreso.sorteos].reverse().filter((sorteo) => periodoElegido === null || sorteo.periodo === periodoElegido);
+  const sorteosVisibles: FilaSorteo[] = [...progreso.sorteos]
+    .reverse()
+    .filter((sorteo) => periodoElegido === null || sorteo.periodo === periodoElegido)
+    .map((sorteo) => ({ ...sorteo, nombre_periodo: nombrePeriodo.get(sorteo.periodo) ?? '' }));
 
-  const columnasSorteo: Column<ResumenSorteo>[] = [
-    { key: 'numero', header: 'Sorteo', render: (sorteo) => <span className="font-bold">#{sorteo.numero}</span> },
-    {
-      key: 'periodo',
-      header: 'Periodo',
-      render: (sorteo) => <span className="font-mono text-xs">P{sorteo.periodo} · {nombrePeriodo.get(sorteo.periodo)}</span>,
-    },
-    { key: 'fecha_hora', header: 'Fecha', render: (sorteo) => sorteo.fecha_hora.replace('T', ' ').slice(0, 16) },
-    {
-      key: 'avance',
-      header: 'Contadas',
-      render: (sorteo) => {
-        const porcentaje = Math.round((100 * sorteo.registrados) / sorteo.tamano);
-        return (
-          <div className="flex items-center gap-2 min-w-[160px]">
-            <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div className={`h-full ${porcentaje === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`} style={{ width: `${porcentaje}%` }} />
-            </div>
-            <span className="text-xs font-semibold text-slate-600">
-              {sorteo.registrados}/{sorteo.tamano}
-            </span>
-          </div>
-        );
-      },
-    },
-    {
-      key: 'con_diferencia',
-      header: 'Con diferencia',
-      className: 'text-right',
-      render: (sorteo) => <span className={sorteo.con_diferencia ? 'font-bold text-rose-600' : 'text-slate-400'}>{sorteo.con_diferencia}</span>,
-    },
-    {
-      key: 'abrir',
-      header: '',
-      render: (sorteo) => (
-        <Link to={`/sortear?sorteo=${sorteo.numero}`} className="text-xs font-bold text-indigo-600 hover:underline">
-          Abrir →
-        </Link>
-      ),
-    },
-  ];
 
   return (
     <div className="space-y-6">
@@ -222,12 +235,15 @@ export const VistaAnio: React.FC = () => {
           })}
         </div>
 
-        <DataTable
-          columns={columnasSorteo}
-          data={sorteosVisibles}
-          keyExtractor={(sorteo) => String(sorteo.numero)}
-          pageSize={10}
-          emptyMessage={periodoElegido ? 'Este periodo todavía no tiene sorteos.' : 'Todavía no hay sorteos.'}
+        <Tabla
+          etiqueta="Sorteos del año"
+          densidad="compacta"
+          columnas={COLUMNAS_SORTEO}
+          filas={sorteosVisibles}
+          claveFila={(sorteo) => String(sorteo.numero)}
+          tonoFila={(sorteo) => (sorteo.registrados === sorteo.tamano ? 'visitada' : 'normal')}
+          altoMaximo="420px"
+          vacio={periodoElegido ? 'Este periodo todavía no tiene sorteos.' : 'Todavía no hay sorteos.'}
         />
       </div>
 
@@ -276,12 +292,14 @@ export const VistaAnio: React.FC = () => {
           {semana === progreso.semana_actual && <span className="ml-2 text-xs text-indigo-600">(actual)</span>}
           <span className="ml-2 text-xs font-medium text-slate-500">{registrosSemana.length} conteos</span>
         </h3>
-        <DataTable
-          columns={columnasRegistro}
-          data={registrosSemana}
-          keyExtractor={(registro) => `${registro.sorteo}-${registro.sku}`}
-          pageSize={10}
-          emptyMessage="En esta semana no se hizo ningún conteo."
+        <Tabla
+          etiqueta={`Conteos de la semana ${semana}`}
+          densidad="compacta"
+          columnas={COLUMNAS_REGISTRO}
+          filas={registrosSemana}
+          claveFila={claveRegistro}
+          altoMaximo="420px"
+          vacio="En esta semana no se hizo ningún conteo."
         />
       </div>
 
@@ -328,14 +346,15 @@ export const VistaAnio: React.FC = () => {
           </div>
         )}
 
-        <DataTable
-          columns={[{ key: 'semana', header: 'Semana' }, ...columnasRegistro]}
-          data={registrosVisibles}
-          keyExtractor={(registro) => `${registro.sorteo}-${registro.sku}`}
-          searchPlaceholder="Buscar por SKU..."
-          onSearchChange={setBusqueda}
-          pageSize={15}
-          emptyMessage="Todavía no hay conteos con ese filtro."
+        <FiltrosTabla busqueda={busqueda} alBuscar={setBusqueda} marcador="Buscar por SKU..." resumen={`${registrosVisibles.length} de ${registros.length} conteos`} />
+        <Tabla
+          etiqueta="Todos los conteos del año"
+          densidad="compacta"
+          columnas={COLUMNAS_REGISTRO_CON_SEMANA}
+          filas={registrosVisibles}
+          claveFila={claveRegistro}
+          altoMaximo="560px"
+          vacio="Todavía no hay conteos con ese filtro."
         />
       </div>
 
