@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/layout/Layout';
 import { Redirigir } from './components/layout/Redirigir';
+import { Inicio } from './pages/Inicio';
 import { Sortear } from './pages/Sortear';
 import { Inventario } from './pages/Inventario';
 import { Pedidos } from './pages/Pedidos';
@@ -23,8 +24,7 @@ function Rutas() {
       conectado={error === null}
     >
       <Routes>
-        {/* / queda para una portada; por ahora lleva al Paso 1. */}
-        <Route path="/" element={<Redirigir to="/sortear" />} />
+        <Route path="/" element={<Inicio />} />
         <Route path="/sortear" element={<Sortear />} />
         <Route
           path="/recorrido"
@@ -44,7 +44,7 @@ function Rutas() {
         <Route path="/referencias" element={<Redirigir to="/inventario" />} />
         <Route path="/reportes" element={<Redirigir to="/informes" />} />
         <Route path="/picking" element={<Redirigir to="/recorrido" />} />
-        <Route path="*" element={<Navigate to="/sortear" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
   );

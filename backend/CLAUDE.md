@@ -48,7 +48,7 @@ La barra ya no tiene 6 pestañas sueltas: son **4 pasos numerados** que cuentan 
 | 3 | `/inventario` (`?vista=anio`, `?sorteo=N`) | Inventario (`pages/Inventario.tsx`) | Una pantalla con dos vistas. **Referencias** (por defecto, `components/inventario/VistaReferencias.tsx`): maestro con ABC, ubicación, conteos X/5, historial y "Recalcular maestro"; con `?sorteo=N` arranca filtrada en "Contadas en el sorteo N" (chip ✕ para quitarlo) y una columna sistema → contada (diferencia). **Año** (`VistaAnio.tsx`): 5 periodos, sorteos, conteos por semana, historial filtrable por responsable y "Reiniciar conteo". Las tarjetas de indicadores y la verificación **ya no van aquí** (están en Informes). Cierra con "Ver informes →" |
 | 4 | `/informes` | Informes (`pages/Informes.tsx`) | Arriba los indicadores del año, **solo aquí**: cumplimiento como número grande, sorteados, referencias completas y con diferencia. Debajo la verificación (ninguna repetida en un sorteo, ninguna pasa de 5). Luego las 3 descargas de entrega con el nombre exacto, sin pedir nombre (`utils/entregas.ts`): `Día2_Ejercicio1.csv` (maestro), `Día2_Ejercicio6.csv` (picking Tarea 6) y `Día2_Ejercicio8.csv` (sorteos). Más abajo, secundarias: registros de conteo y pedidos de un día |
 
-- `/` queda reservada para una portada futura; por ahora **redirige a `/sortear` conservando la consulta** (`/?sorteo=N` → `/sortear?sorteo=N`).
+- **Portada en `/`** (`pages/Inicio.tsx`, 30/10/2026): cabecera con el caso y un botón principal que depende del estado (sin sorteos → "Empezar: sortear"; último sorteo con pendientes → "Continuar: contar el sorteo N" en `/recorrido?origen=sorteo&sorteo=N`; completo → "Sortear el siguiente"), enlace a la Tarea 6 en 3D, cifras del año (referencias, conteos, cumplimiento, Tarea 6 en metros desde `/api/picking/prueba`) y los 4 pasos como tarjetas con su estado. La marca de la barra lleva a `/` y las rutas desconocidas también.
 - **Rutas viejas** (`components/layout/Redirigir.tsx`, con prueba en Vitest): `/conteos-anio` → `/inventario?vista=anio`, `/referencias` → `/inventario`, `/reportes` → `/informes`, `/picking` → `/recorrido`.
 - `/pedidos` sigue existiendo pero **sale de la barra**. Su único rol: el origen "Pedidos del día" del Paso 2 enlaza ahí para ver el detalle.
 - **Indicador "SEM · SORTEO" de la barra:** antes se pedía el progreso una sola vez al abrir la página, por eso mostraba el sorteo 6 cuando ya existía el 7. Ahora el progreso vive en un contexto (`hooks/ProgresoContexto.tsx`, `useProgreso()`), y las pantallas que sortean, cuentan o reinician llaman a `recargar()`.
@@ -70,7 +70,7 @@ Hecho el 29/10/2026: el flujo de 4 pasos (ver arriba). Lo que se había listado 
 
 Siguiente:
 0. **Rediseño de `/recorrido`** en dos fases: la Fase 1 (distribución y sincronía) está hecha; falta la **Fase 2 (estilo visual del 3D)**: cámara ortográfica isométrica, estanterías porta-pallet con cajas sobre estibas (InstancedMesh), montacargas con horquillas por nivel, ruta luminosa y calidad alta/básica.
-1. Portada en `/` (hoy redirige a `/sortear`). **Pospuesta** hasta terminar el rediseño de `/recorrido`.
+1. ~~Portada en `/`~~ **Hecha el 30/10/2026** (ver "Flujo de uso: 4 pasos").
 2. **Último pendiente visual, después de los 4 pasos:** pulir lo que conserva el estilo viejo (insignias verdes de clase, pestañas y barras índigo, `rounded-xl/2xl`). No mezclarlo con cambios de lógica.
 
 ### Pantalla Recorrido (rediseño 30/10/2026, Fase 1: distribución y sincronía)
@@ -374,7 +374,7 @@ Todas las respuestas son JSON. Los errores se devuelven como `{"error": "mensaje
 - **Estilo "bodega industrial"** (diseño A del lienzo de Claude Design, 28/10/2026): barra superior oscura (`src/components/layout/Navbar.tsx`) con indicador que se desliza, entrada escalonada y menú desplegable en móvil; títulos en Archivo condensada en mayúsculas (clase `titulo-senal`), cuerpo en IBM Plex Sans y códigos en IBM Plex Mono (fuentes instaladas con `@fontsource`, funcionan sin internet). Colores: papel `#F4F1EA`, tinta `#17181A` y un solo acento naranja `#FF6B2C` (`bg-senal`). En `src/index.css` se **redefinen** las escalas `slate` (grises cálidos) e `indigo` (tinta) y los radios, así que las clases existentes ya toman el estilo; no volver a usar degradados ni tarjetas muy redondeadas.
 - La barra muestra los **4 pasos** numerados (ver "Flujo de uso: 4 pasos"), con el mismo indicador que se desliza; ya no hay rótulos de grupo INVENTARIO / ARDUINO.
 - Las rutas sin extensión las devuelve Express como `index.html` para que las maneje React Router.
-- Pantallas: `pages/Sortear.tsx`, `Recorrido.tsx`, `Inventario.tsx` (vistas en `components/inventario/`), `Informes.tsx` y `Pedidos.tsx`. Pruebas de pantalla en Vitest junto a cada una (`*.test.tsx`, con la API simulada). Con `cleanup` en `afterEach`, porque Vitest no usa `globals`.
+- Pantallas: `pages/Inicio.tsx` (portada), `Sortear.tsx`, `Recorrido.tsx`, `Inventario.tsx` (vistas en `components/inventario/`), `Informes.tsx` y `Pedidos.tsx`. Pruebas de pantalla en Vitest junto a cada una (`*.test.tsx`, con la API simulada). Con `cleanup` en `afterEach`, porque Vitest no usa `globals`.
 - `Modal.tsx` se monta con `createPortal` en `document.body` (ver decisión 6). La animación `.pagina-entrar` de `<main>` deja un `transform` que rompe `position: fixed`.
 
 ## Pendientes

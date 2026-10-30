@@ -13,7 +13,6 @@ function llegarA(rutaInicial: string): string {
   const { getByTestId, unmount } = render(
     <MemoryRouter initialEntries={[rutaInicial]}>
       <Routes>
-        <Route path="/" element={<Redirigir to="/sortear" />} />
         <Route path="/conteos-anio" element={<Redirigir to="/inventario" extra={{ vista: 'anio' }} />} />
         <Route path="/picking" element={<Redirigir to="/recorrido" />} />
         <Route path="*" element={<Destino />} />
@@ -26,9 +25,8 @@ function llegarA(rutaInicial: string): string {
 }
 
 describe('Redirigir', () => {
-  it('lleva / a /sortear conservando la consulta', () => {
-    expect(llegarA('/?sorteo=7')).toBe('/sortear?sorteo=7');
-    expect(llegarA('/')).toBe('/sortear');
+  it('conserva la consulta de la ruta vieja', () => {
+    expect(llegarA('/picking?origen=sorteo&sorteo=7')).toBe('/recorrido?origen=sorteo&sorteo=7');
   });
 
   it('agrega los parámetros extra a la ruta vieja', () => {

@@ -38,7 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({ semanaActual, sorteoActual, cone
     <header className="sticky top-0 z-30 bg-tinta text-papel border-b-[3px] border-senal">
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6 h-[68px] flex items-center gap-7">
         {/* Marca */}
-        <NavLink to="/sortear" className="flex items-center gap-2.5 shrink-0 text-papel no-underline">
+        <NavLink to="/" aria-label="Inicio" className="flex items-center gap-2.5 shrink-0 text-papel no-underline">
           <span className="titulo-senal flex items-center justify-center w-[34px] h-[34px] bg-senal text-tinta text-[15px]">CA</span>
           <span className="flex flex-col leading-tight">
             <span className="titulo-senal text-[17px] tracking-[0.04em]">Centauros</span>
