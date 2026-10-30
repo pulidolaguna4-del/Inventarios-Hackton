@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ClaseAbc, EstadoPedido } from '../../types/inventario';
+import type { ClaseAbc } from '../../types/inventario';
 
 export type TonoBadge = 'indigo' | 'emerald' | 'amber' | 'rose' | 'blue' | 'purple' | 'slate';
 
@@ -33,16 +33,4 @@ const TONO_POR_CLASE: Record<ClaseAbc, TonoBadge> = { A: 'emerald', B: 'amber', 
 
 export const BadgeClase: React.FC<{ clase: ClaseAbc }> = ({ clase }) => (
   <Badge label={`Clase ${clase}`} tono={TONO_POR_CLASE[clase]} size="sm" />
-);
-
-const TONO_POR_ESTADO_PEDIDO: Record<EstadoPedido, TonoBadge> = {
-  Pendiente: 'slate',
-  'En alistamiento': 'amber',
-  Alistado: 'indigo',
-  'En entrega': 'blue',
-  Entregado: 'emerald',
-};
-
-export const BadgeEstadoPedido: React.FC<{ estado: EstadoPedido }> = ({ estado }) => (
-  <Badge label={estado} tono={TONO_POR_ESTADO_PEDIDO[estado]} />
 );

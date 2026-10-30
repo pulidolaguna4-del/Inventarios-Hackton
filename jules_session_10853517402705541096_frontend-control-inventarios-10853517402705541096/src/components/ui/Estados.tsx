@@ -84,10 +84,3 @@ export const BarraConteos: React.FC<{ contados: number; maximo?: number; conDife
     </div>
   );
 };
-
-/** Código SKU con el estilo de etiqueta monoespaciada. */
-export const EtiquetaSku: React.FC<{ sku: number | string }> = ({ sku }) => (
-  <span className="font-mono font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md text-xs border border-indigo-100">
-    {sku}
-  </span>
-);

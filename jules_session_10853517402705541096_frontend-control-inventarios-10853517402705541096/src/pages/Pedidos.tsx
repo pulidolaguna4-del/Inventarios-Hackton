@@ -1,15 +1,96 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Truck, ArrowRight, Eye, CalendarDays } from 'lucide-react';
-import { DataTable, type Column } from '../components/ui/DataTable';
+import { Tabla, type ColumnaTabla } from '../components/ui/Tabla';
+import { FiltrosTabla } from '../components/ui/FiltrosTabla';
+import { Insignia, type TonoInsignia } from '../components/ui/Insignia';
 import { Modal } from '../components/ui/Modal';
-import { BadgeEstadoPedido } from '../components/ui/Badge';
 import { Aviso, Cargando, ErrorCarga, type MensajeAviso } from '../components/ui/Estados';
 import { formatearNumero } from '../utils/formato';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 import { useApi } from '../hooks/useApi';
 import { api } from '../services/api';
 import type { EstadoPedido, Pedido } from '../types/inventario';
+
+/** Tono de la Insignia de cada estado, de gris (sin empezar) a verde (entregado). */
+const TONO_ESTADO: Record<EstadoPedido, TonoInsignia> = {
+  Pendiente: 'neutro',
+  'En alistamiento': 'aviso',
+  Alistado: 'aviso',
+  'En entrega': 'acento',
+  Entregado: 'exito',
+};
+
+const InsigniaEstado: React.FC<{ estado: EstadoPedido }> = ({ estado }) => <Insignia tono={TONO_ESTADO[estado]}>{estado}</Insignia>;
+
+/** Pedido con lo que cambia su fila (si se está avanzando), para que la Tabla compare campo por campo. */
+type FilaPedido = Pedido & { avanzando: boolean };
+
+interface AccionesPedido {
+  avanzar: (pedido: Pedido) => void;
+  verDetalle: (pedido: Pedido) => void;
+}
+
+/** Columnas de la tabla (con acciones estables, para que no cambien entre renders). */
+function crearColumnas(acciones: AccionesPedido): ColumnaTabla<FilaPedido>[] {
+  return [
+    { clave: 'id_pedido', titulo: 'Pedido', render: (pedido) => <span className="tabla-chip">{pedido.id_pedido}</span> },
+    { clave: 'cliente', titulo: 'Cliente' },
+    {
+      clave: 'productos',
+      titulo: 'Productos',
+      render: (pedido) => (
+        <span className="text-xs opacity-80">
+          {pedido.lineas.slice(0, 3).map((linea) => `${linea.sku} ×${linea.cantidad}`).join(', ')}
+          {pedido.lineas.length > 3 && ` y ${pedido.lineas.length - 3} más`}
+        </span>
+      ),
+    },
+    { clave: 'unidades', titulo: 'Unidades', alinear: 'derecha', render: (pedido) => formatearNumero(pedido.unidades) },
+    { clave: 'estado', titulo: 'Estado', render: (pedido) => <InsigniaEstado estado={pedido.estado} /> },
+    {
+      clave: 'ultimo_cambio',
+      titulo: 'Último cambio',
+      render: (pedido) => <span className="font-mono text-xs opacity-70">{pedido.ultimo_cambio?.replace('T', ' ') ?? '—'}</span>,
+    },
+    {
+      clave: 'acciones',
+      titulo: 'Acciones',
+      render: (pedido) => (
+        <span className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => acciones.verDetalle(pedido)}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[var(--tabla-chip)] hover:bg-[var(--tabla-hover)] cursor-pointer"
+            title="Ver detalle e historial"
+            aria-label={`Ver el pedido ${pedido.id_pedido}`}
+          >
+            <Eye className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
+          {pedido.siguiente_estado ? (
+            <button
+              type="button"
+              onClick={() => acciones.avanzar(pedido)}
+              disabled={pedido.avanzando}
+              className="inline-flex items-center gap-1 h-8 px-3 rounded-full text-xs font-semibold bg-[var(--insignia-acento-fondo)] text-[var(--insignia-acento-texto)] hover:brightness-95 cursor-pointer disabled:opacity-50"
+            >
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+              {pedido.siguiente_estado}
+            </button>
+          ) : (
+            <Insignia tono="exito">Finalizado</Insignia>
+          )}
+        </span>
+      ),
+    },
+  ];
+}
+
+const COLUMNAS_LINEAS: ColumnaTabla<Pedido['lineas'][number]>[] = [
+  { clave: 'sku', titulo: 'SKU', render: (linea) => <span className="tabla-chip">{linea.sku}</span> },
+  { clave: 'descripcion', titulo: 'Descripción' },
+  { clave: 'cantidad', titulo: 'Cantidad', alinear: 'derecha', render: (linea) => formatearNumero(linea.cantidad) },
+];
 
 export const Pedidos: React.FC = () => {
   const resumen = useApi(api.obtenerResumen);
@@ -39,6 +120,18 @@ export const Pedidos: React.FC = () => {
     }
   };
 
+  // Acciones estables (siempre llaman a la versión más reciente de `avanzar`): las columnas no
+  // cambian y las filas memorizadas no se vuelven a dibujar por eso.
+  const ultimoAvanzar = useRef(avanzar);
+  useEffect(() => {
+    ultimoAvanzar.current = avanzar;
+  });
+  const [acciones] = useState<AccionesPedido>(() => ({
+    avanzar: (pedido) => ultimoAvanzar.current(pedido),
+    verDetalle: (pedido) => setDetalle(pedido),
+  }));
+  const columnas = useMemo(() => crearColumnas(acciones), [acciones]);
+
   if (resumen.cargando && !resumen.datos) return <Cargando texto="Cargando pedidos..." />;
   if (resumen.error) return <ErrorCarga mensaje={resumen.error} onReintentar={resumen.recargar} />;
   if (!resumen.datos) return null;
@@ -51,63 +144,7 @@ export const Pedidos: React.FC = () => {
       (!texto || String(pedido.id_pedido).includes(texto) || pedido.lineas.some((linea) => String(linea.sku).includes(texto))),
   );
 
-  const columnas: Column<Pedido>[] = [
-    {
-      key: 'id_pedido',
-      header: 'Pedido',
-      render: (pedido) => <span className="font-mono font-bold text-slate-800">{pedido.id_pedido}</span>,
-    },
-    { key: 'cliente', header: 'Cliente' },
-    {
-      key: 'productos',
-      header: 'Productos',
-      render: (pedido) => (
-        <span className="text-xs text-slate-600">
-          {pedido.lineas.slice(0, 3).map((linea) => `${linea.sku} ×${linea.cantidad}`).join(', ')}
-          {pedido.lineas.length > 3 && ` y ${pedido.lineas.length - 3} más`}
-        </span>
-      ),
-    },
-    {
-      key: 'unidades',
-      header: 'Unidades',
-      className: 'text-right',
-      render: (pedido) => formatearNumero(pedido.unidades),
-    },
-    { key: 'estado', header: 'Estado', render: (pedido) => <BadgeEstadoPedido estado={pedido.estado} /> },
-    {
-      key: 'ultimo_cambio',
-      header: 'Último cambio',
-      render: (pedido) => <span className="text-xs text-slate-500">{pedido.ultimo_cambio?.replace('T', ' ') ?? '—'}</span>,
-    },
-    {
-      key: 'acciones',
-      header: 'Acciones',
-      render: (pedido) => (
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setDetalle(pedido)}
-            className="p-1.5 text-slate-500 border border-slate-200 hover:bg-slate-100 rounded-lg cursor-pointer"
-            title="Ver detalle e historial"
-          >
-            <Eye className="w-3.5 h-3.5" />
-          </button>
-          {pedido.siguiente_estado ? (
-            <button
-              onClick={() => avanzar(pedido)}
-              disabled={avanzando === pedido.id_pedido}
-              className="px-2.5 py-1 text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 rounded-lg cursor-pointer flex items-center gap-1 disabled:opacity-50"
-            >
-              <ArrowRight className="w-3.5 h-3.5" />
-              {pedido.siguiente_estado}
-            </button>
-          ) : (
-            <span className="text-xs font-bold text-emerald-600">Finalizado</span>
-          )}
-        </div>
-      ),
-    },
-  ];
+  const filas: FilaPedido[] = visibles.map((pedido) => ({ ...pedido, avanzando: avanzando === pedido.id_pedido }));
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -167,16 +204,26 @@ export const Pedidos: React.FC = () => {
       {pedidos.error ? (
         <ErrorCarga mensaje={pedidos.error} onReintentar={pedidos.recargar} />
       ) : (
-        <DataTable
-          columns={columnas}
-          data={visibles}
-          keyExtractor={(pedido) => String(pedido.id_pedido)}
-          searchPlaceholder="Buscar por número de pedido o SKU..."
-          onSearchChange={setBusqueda}
-          isLoading={pedidos.cargando}
-          pageSize={15}
-          emptyMessage="No hay pedidos con ese filtro."
-        />
+        <div className="space-y-3">
+          <FiltrosTabla
+            busqueda={busqueda}
+            alBuscar={setBusqueda}
+            marcador="Buscar por número de pedido o SKU..."
+            resumen={respuesta ? `${visibles.length} de ${respuesta.pedidos.length} pedidos del ${respuesta.fecha}` : undefined}
+          />
+          <Tabla
+            etiqueta="Pedidos del día"
+            columnas={columnas}
+            filas={filas}
+            claveFila={(pedido) => String(pedido.id_pedido)}
+            tonoFila={(pedido) => (pedido.estado === 'Entregado' ? 'visitada' : 'normal')}
+            alClicFila={setDetalle}
+            cargando={pedidos.cargando && !respuesta}
+            altoMaximo="640px"
+            vacio="No hay pedidos con ese filtro."
+            pie="Clic o Enter en un pedido para ver su detalle e historial."
+          />
+        </div>
       )}
 
       {/* Detalle del pedido */}
@@ -188,26 +235,15 @@ export const Pedidos: React.FC = () => {
                 Cliente <strong>{detalle.cliente}</strong> · {detalle.fecha} · {detalle.referencias} referencias ·{' '}
                 {formatearNumero(detalle.unidades)} unidades
               </span>
-              <BadgeEstadoPedido estado={detalle.estado} />
+              <InsigniaEstado estado={detalle.estado} />
             </div>
-            <table className="w-full text-left border border-slate-200">
-              <thead className="bg-slate-100 text-slate-600 uppercase">
-                <tr>
-                  <th className="p-2">SKU</th>
-                  <th className="p-2">Descripción</th>
-                  <th className="p-2 text-right">Cantidad</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {detalle.lineas.map((linea, indice) => (
-                  <tr key={`${linea.sku}-${indice}`}>
-                    <td className="p-2 font-mono font-bold">{linea.sku}</td>
-                    <td className="p-2">{linea.descripcion}</td>
-                    <td className="p-2 text-right">{formatearNumero(linea.cantidad)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Tabla
+              etiqueta="Productos del pedido"
+              densidad="compacta"
+              columnas={COLUMNAS_LINEAS}
+              filas={detalle.lineas}
+              claveFila={(linea) => String(linea.sku)}
+            />
             <div>
               <p className="font-bold text-slate-700 mb-1.5">Historial de estados</p>
               {detalle.historial.length === 0 ? (
@@ -216,7 +252,7 @@ export const Pedidos: React.FC = () => {
                 <ol className="space-y-1">
                   {detalle.historial.map((cambio) => (
                     <li key={cambio.fecha_hora + cambio.estado} className="flex items-center gap-2">
-                      <BadgeEstadoPedido estado={cambio.estado} />
+                      <InsigniaEstado estado={cambio.estado} />
                       <span className="text-slate-500">{cambio.fecha_hora.replace('T', ' ')}</span>
                     </li>
                   ))}
