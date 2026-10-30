@@ -70,7 +70,7 @@ Hecho el 29/10/2026: el flujo de 4 pasos (ver arriba). Lo que se había listado 
 - ~~"Pedidos como entrada del picking"~~ → reemplazado por el origen `lote` ("Pedidos del día") del Paso 2.
 
 Siguiente:
-0. **Rediseño de `/recorrido`** en dos fases: la Fase 1 (distribución y sincronía) está hecha; falta la **Fase 2 (estilo visual del 3D)**: cámara ortográfica isométrica, estanterías porta-pallet con cajas sobre estibas (InstancedMesh), montacargas con horquillas por nivel, ruta luminosa y calidad alta/básica.
+0. ~~Rediseño de `/recorrido`~~ **Hecho el 30/10/2026**: Fase 1 (distribución y sincronía) y Fase 2 (estilo visual del 3D). Ver "Pantalla Recorrido".
 1. ~~Portada en `/`~~ **Hecha el 30/10/2026** (ver "Flujo de uso: 4 pasos").
 2. **Último pendiente visual, después de los 4 pasos:** pulir lo que conserva el estilo viejo (insignias verdes de clase, pestañas y barras índigo, `rounded-xl/2xl`). No mezclarlo con cambios de lógica.
 
@@ -86,6 +86,21 @@ Siguiente:
 - **Desplazamiento:** la fila "Aquí" (o "En camino") se centra asignando **solo el `scrollTop` del contenedor de la tabla** (`centrarEnContenedor` en `utils/desplazamiento.ts`, lo hace la `Tabla` con `filaActiva`), nunca `scrollIntoView`, que también mueve la ventana. El movimiento suave es CSS (`scroll-behavior` de `.tabla-scroll`), así que respeta `prefers-reduced-motion`. El foco usa `preventScroll`.
 - **Sincronía y rendimiento** (`utils/reloj.ts`, `utils/animacion.ts`): el **reloj** (`Reloj`) es la única fuente de verdad del tiempo. La escena lo avanza en `useFrame` (`reloj.avanzar`) y lo publica unas 10 veces por segundo; solo `LineaTiempo` lo escucha (`useTiempoReloj`, con `useSyncExternalStore`). En cada cuadro la escena calcula `paradaActivaEnTiempo` (búsqueda binaria) y **solo avisa a React cuando cambia la parada activa** (`{indice, fase: en_camino | aqui | terminado}`). La página y la tabla se vuelven a dibujar solo entonces. La parada activa se guarda junto con su línea; si la línea cambia, se recalcula con el último tiempo publicado.
 
+### Pantalla Recorrido, Fase 2: estilo visual del 3D (30/10/2026)
+
+Ilustración isométrica tipo "casa de muñecas", low-poly, colores sólidos y sin texturas. **No cambia nada de los datos**: geometría, posiciones, medidas, los 2 niveles, la ruta, los tiempos y la maqueta en U siguen saliendo del backend (174,4 m). Solo cambia cómo se ve.
+
+- **Archivos:** `components/mapa/Escena3D.tsx` (cámaras, luces y lienzo) y las piezas en `components/mapa/escena/`: `Piso.tsx`, `Estanterias.tsx`, `Instancias.tsx`, `Montacargas.tsx`, `CapaRuta.tsx` y `Etiquetas.tsx`. La geometría es pura y probada en `utils/escena.ts` (`piezasEstanterias`, `cajasDeSku`, `franjasSeguridad`). La altura de las horquillas sale de `nivelHorquillas` en `utils/animacion.ts`. Todos los colores están en `ESCENA` de `components/mapa/constantes.ts`.
+- **Cámara "Isométrica":** ortográfica (`OrthographicCamera` de drei) desde (1, 1, 1). El zoom inicial encuadra la bodega descontando el HUD, y la rueda hace zoom. Planta y Carrito siguen con la cámara en perspectiva.
+- **Escena:** piso azul grisáceo con baldosas de 1 m; dos paredes bajas cortadas (fondo e izquierda) con el borde del corte oscuro; franjas de seguridad amarillas y negras a los lados de cada pasillo y en el borde de la zona abierta; salidas pintadas en el piso con flechas. En la maqueta, el letrero va a lo largo del pasillo.
+- **Estanterías** (todo con `InstancedMesh`): parales azules en las 4 esquinas, vigas naranjas (piso, intermedia y superior: los 2 niveles), una estiba por celda y de 1 a 4 cajas kraft en 3 tonos. Cantidad, hueco, alto y tono salen de una semilla por SKU (mulberry32): siempre se ven igual. La clase ABC o la categoría va en una **etiqueta de color al frente de la viga**, no en las cajas. Celda vacía: estiba sola. Un volumen invisible por celda (también instanciado) recibe el cursor y los clics.
+- **Montacargas:** chasis amarillo, 4 ruedas, cabina, mástil, horquillas y baliza. Gira suave hacia donde avanza y, detenido en una parada, hacia la estantería. **Sube las horquillas al nivel que recoge**: en nivel 1 abajo, en nivel 2 arriba y en "ambos", primero el 1 (T) y luego el 2 (3T). El movimiento dura lo mismo que la parada. Encima lleva un **localizador** (pin y haz naranja, sin prueba de profundidad), porque en la vista isométrica las estanterías de 3 m tapan los pasillos. Crece con el tamaño de la bodega.
+- **Capa futurista:** la ruta en el piso es punteada y tenue en lo que falta, y luminosa en lo recorrido (se actualiza en cada cuadro desde el reloj, sin React). La próxima parada tiene un anillo que late (se ve a través de las estanterías) y una etiqueta flotante con ubicación, nivel y tiempo. Contornos de celda: naranja con brillo para la parada activa o la fila resaltada desde la tabla, amarillo para las que faltan y gris oscuro para las visitadas. La leyenda del HUD los explica.
+- **Calidad alta / básica** (botón en el HUD): en básica no hay sombras, la baliza no parpadea y el anillo no late, con resolución 1×. Cambiar la calidad vuelve a crear el lienzo.
+- **Etiquetas flotantes sin `<Html>` de drei:** en esta app, el `<Html>` de drei agregaba su contenedor pero dejaba el contenido vacío (comprobado en Edge, también en tiempo real). Por eso las etiquetas son elementos normales del DOM encima del lienzo, y `Proyector` (`escena/Etiquetas.tsx`) los mueve en cada cuadro proyectando el punto 3D. **Regla:** no usar `<Html>` de drei.
+- **Única textura:** el letrero de las salidas se dibuja en un `CanvasTexture` generado en el navegador. No se carga ningún archivo, imagen ni fuente externa.
+- **Revisado en Edge** (sin GPU, con SwiftShader y por el protocolo de DevTools): Tarea 6 reproduciéndose con la tabla sincronizada, la etiqueta de la parada, el localizador y la maqueta en U con el montacargas girado hacia la estantería y las horquillas adentro. Sin errores en la consola.
+
 ### Mapa 3D (cerrado el 29/10/2026, dentro del Paso 2)
 
 Pedido del equipo en 5 pasos. Respaldo antes de empezar: `Documentos/Respaldos-Hackton/proyecto_antes_mapa3d_20261028_1136.zip` (backend y frontend con `node_modules`).
@@ -98,7 +113,7 @@ Pedido del equipo en 5 pasos. Respaldo antes de empezar: `Documentos/Respaldos-H
 
 **Frontend:**
 4. Dependencias instaladas: `three` 0.186, `@react-three/fiber` 9.8, `@react-three/drei` 10.7, `@types/three`. Archivos: `src/utils/animacion.ts` (+ 7 pruebas en Vitest: la posición del carrito es función pura del tiempo), `src/components/mapa/Escena3D.tsx` (piso, pasillos, cabeceras, salidas, estantes con 3 travesaños, cajas por ABC o categoría, por recoger en amarillo y ya recogidas en tinta, ruta punteada, carrito movido con `useFrame` y el reloj de three, cámaras planta / isométrica / carrito, tooltip con `Html`), `LineaTiempo.tsx` (play/pausa, 1× 2× 4×, barra arrastrable, recorrido 1..N o "todos seguidos") y `PanelRecorrido.tsx` (contadores, lista de pasos con autodesplazamiento, instrucciones con escala editable y botón copiar; reemplazado el 30/10/2026 por el HUD, la tabla del recorrido e `InstruccionesArduino`, ver "Pantalla Recorrido"). `pages/Picking.tsx` (hoy `pages/Recorrido.tsx`) reescrita con interruptor Bodega Arauca / Maqueta y la tabla de trayectos debajo; si no hay WebGL muestra un aviso y la tabla. La pantalla se carga aparte (`React.lazy`): `Recorrido-*.js` pesa ≈ 994 KB y el resto sigue en 338 KB.
-   Compila (`tsc`), 14 pruebas de Vitest pasan y el build funciona. Sin texturas, fuentes ni HDR remotos (no se usa `<Text>` ni `<Environment>` de drei).
+   Compila (`tsc`), 14 pruebas de Vitest pasan y el build funciona. Sin texturas, fuentes ni HDR remotos (no se usa `<Text>` ni `<Environment>` de drei; desde la Fase 2 tampoco `<Html>`).
 
 **Cierre (29/10/2026):**
 - Visto en el navegador por el equipo: dibuja la bodega, botones de cámara, interruptor ABC/categoría, panel de pasos y campo de escala.

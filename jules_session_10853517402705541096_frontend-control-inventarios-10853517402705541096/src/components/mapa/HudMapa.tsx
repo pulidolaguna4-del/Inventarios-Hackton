@@ -1,12 +1,12 @@
 import React from 'react';
-import { Box, Cpu, Map as IconoMapa, Maximize, Minimize, Navigation } from 'lucide-react';
+import { Box, Cpu, Gauge, Map as IconoMapa, Maximize, Minimize, Navigation } from 'lucide-react';
 import type { VistaMapa } from '../../types/inventario';
 import type { ParadaActiva, ParadaLinea } from '../../utils/animacion';
 import { claveParada } from '../../utils/animacion';
 import { textoVecesT, type FilaRecorrido } from '../../utils/tablaRecorrido';
 import { formatearNumero } from '../../utils/formato';
-import type { ModoCamara, ModoColor } from './Escena3D';
-import { COLORES_ABC, COLORES_CATEGORIA } from './constantes';
+import type { Calidad, ModoCamara, ModoColor } from './Escena3D';
+import { COLORES_ABC, COLORES_CATEGORIA, ESCENA } from './constantes';
 
 // Piezas del HUD que flotan sobre el mapa 3D. Todas llevan fondo propio para leerse sobre la escena.
 
@@ -51,9 +51,11 @@ export const ControlesMapa: React.FC<{
   alCambiarCamara: (modo: ModoCamara) => void;
   vista: VistaMapa;
   alCambiarVista: (vista: VistaMapa) => void;
+  calidad: Calidad;
+  alCambiarCalidad: (calidad: Calidad) => void;
   pantallaCompleta: boolean;
   alAlternarPantallaCompleta: () => void;
-}> = ({ modoCamara, alCambiarCamara, vista, alCambiarVista, pantallaCompleta, alAlternarPantallaCompleta }) => (
+}> = ({ modoCamara, alCambiarCamara, vista, alCambiarVista, calidad, alCambiarCalidad, pantallaCompleta, alAlternarPantallaCompleta }) => (
   <div className="flex flex-wrap justify-end gap-2">
     <div className="flex" role="group" aria-label="Vista de cámara">
       {CAMARAS.map(({ valor, etiqueta, icono: Icono }) => (
@@ -66,6 +68,15 @@ export const ControlesMapa: React.FC<{
     <SelectorVista vista={vista} alCambiar={alCambiarVista} />
     <button
       type="button"
+      onClick={() => alCambiarCalidad(calidad === 'alta' ? 'basica' : 'alta')}
+      title="Básica: sin sombras ni baliza animada, para equipos con gráfica integrada"
+      className={claseBoton(false)}
+    >
+      <Gauge className="w-3.5 h-3.5" />
+      Calidad: {calidad === 'alta' ? 'alta' : 'básica'}
+    </button>
+    <button
+      type="button"
       onClick={alAlternarPantallaCompleta}
       aria-label={pantallaCompleta ? 'Salir de pantalla completa' : 'Pantalla completa'}
       title={pantallaCompleta ? 'Salir de pantalla completa' : 'Pantalla completa'}
@@ -76,7 +87,7 @@ export const ControlesMapa: React.FC<{
   </div>
 );
 
-/** Abajo a la izquierda: leyenda de colores e interruptor ABC / categoría. */
+/** Abajo a la izquierda: leyenda (etiquetas de las vigas y contornos) e interruptor ABC / categoría. */
 export const LeyendaMapa: React.FC<{ modoColor: ModoColor; alCambiar: (modo: ModoColor) => void }> = ({ modoColor, alCambiar }) => {
   const paleta = modoColor === 'abc' ? COLORES_ABC : COLORES_CATEGORIA;
   return (
@@ -97,12 +108,16 @@ export const LeyendaMapa: React.FC<{ modoColor: ModoColor; alCambiar: (modo: Mod
           </span>
         ))}
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 border border-tinta bg-[#facc15]" />
+          <span className="w-2.5 h-2.5 border-2" style={{ borderColor: ESCENA.contornoPendiente }} />
           Por visitar
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 border border-tinta bg-tinta" />
+          <span className="w-2.5 h-2.5 border-2" style={{ borderColor: ESCENA.contornoVisitada }} />
           Ya visitada
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 border-2" style={{ borderColor: ESCENA.contornoActivo, background: `${ESCENA.contornoActivo}33` }} />
+          Próxima parada
         </span>
       </div>
     </div>

@@ -10,7 +10,7 @@ import { useProgreso } from '../hooks/ProgresoContexto';
 import { useConteoSorteo } from '../hooks/useConteoSorteo';
 import { api } from '../services/api';
 import type { ConsultaRecorridos, OrigenPicking, PickingConTrazado, VistaMapa } from '../types/inventario';
-import { Escena3D, type ModoCamara, type ModoColor } from '../components/mapa/Escena3D';
+import { Escena3D, type Calidad, type ModoCamara, type ModoColor } from '../components/mapa/Escena3D';
 import { soportaWebGL } from '../components/mapa/constantes';
 import { LineaTiempo } from '../components/mapa/LineaTiempo';
 import { ControlesMapa, LeyendaMapa, ResumenOrigen, SelectorVista, TarjetaParada } from '../components/mapa/HudMapa';
@@ -132,6 +132,7 @@ export const Recorrido: React.FC = () => {
   const [vista, setVista] = useState<VistaMapa>('arauca');
   const [modoColor, setModoColor] = useState<ModoColor>('abc');
   const [modoCamara, setModoCamara] = useState<ModoCamara>('isometrica');
+  const [calidad, setCalidad] = useState<Calidad>('alta');
   // Por defecto se reproducen todos los recorridos seguidos; el selector aísla uno.
   const [seleccion, setSeleccion] = useState<number | 'todos'>('todos');
 
@@ -312,10 +313,12 @@ export const Recorrido: React.FC = () => {
                 linea={linea}
                 reloj={reloj}
                 paradas={paradas}
+                activa={activa}
                 alCambiarParada={guardarActiva}
                 alTerminar={() => setReproduciendo(false)}
                 modoColor={modoColor}
                 modoCamara={modoCamara}
+                calidad={calidad}
                 visitadas={visitadas}
                 pendientes={pendientes}
                 resaltadas={resaltadas}
@@ -332,6 +335,8 @@ export const Recorrido: React.FC = () => {
               alCambiarCamara={setModoCamara}
               vista={vista}
               alCambiarVista={cambiarVista}
+              calidad={calidad}
+              alCambiarCalidad={setCalidad}
               pantallaCompleta={pantallaCompleta}
               alAlternarPantallaCompleta={alternarPantallaCompleta}
             />

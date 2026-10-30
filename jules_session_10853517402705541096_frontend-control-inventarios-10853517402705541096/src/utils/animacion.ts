@@ -171,6 +171,47 @@ export function ubicacionesPorEstado(paradas: ParadaLinea[], activa: ParadaActiv
   return { visitadas, pendientes };
 }
 
+// ---------------------------------------------------------------------------
+// Horquillas del montacargas
+// ---------------------------------------------------------------------------
+
+/** Parte de cada tramo de la parada que se usa para subir (o cambiar de nivel) y, al final, para bajar. */
+const FRACCION_SUBIR = 0.3;
+const FRACCION_BAJAR = 0.2;
+
+const suavizar = (f: number) => f * f * (3 - 2 * f);
+
+/**
+ * Nivel de las horquillas en el instante t, como número continuo: 0 = abajo (transporte),
+ * 1 = nivel 1, 2 = nivel 2. En una parada recorre sus ubicaciones de menor a mayor nivel y
+ * cada una dura su tiempo de recogida (T o 3T); en "ambos niveles" primero el 1 (T) y luego
+ * el 2 (3T). Al final de la parada vuelve a bajar. Así el movimiento dura lo mismo que la parada.
+ */
+export function nivelHorquillas(linea: LineaDeTiempo, t: number): number {
+  const { eventos, duracion } = linea;
+  if (eventos.length === 0) return 0;
+  const tiempo = Math.min(Math.max(t, 0), duracion);
+  const evento = eventos[indiceEnTiempo(eventos, tiempo)];
+  if (evento.tipo !== 'parada' || tiempo >= evento.t_fin) return 0;
+
+  const ubicaciones = [...evento.ubicaciones].sort((a, b) => a.nivel - b.nivel);
+  let inicio = evento.t_inicio;
+  let previo = 0;
+  for (let i = 0; i < ubicaciones.length; i++) {
+    const { nivel, tiempo_recogida_s: duracionTramo } = ubicaciones[i];
+    const fin = inicio + duracionTramo;
+    if (tiempo < fin || i === ubicaciones.length - 1) {
+      const f = duracionTramo > 0 ? Math.min((tiempo - inicio) / duracionTramo, 1) : 1;
+      if (f < FRACCION_SUBIR) return previo + (nivel - previo) * suavizar(f / FRACCION_SUBIR);
+      if (i === ubicaciones.length - 1 && f > 1 - FRACCION_BAJAR) return nivel * (1 - suavizar((f - (1 - FRACCION_BAJAR)) / FRACCION_BAJAR));
+      return nivel;
+    }
+    previo = nivel;
+    inicio = fin;
+  }
+  return 0;
+}
+
 /** Segundos -> "m:ss". */
 export function formatearTiempo(segundos: number): string {
   const total = Math.max(0, Math.floor(segundos));
