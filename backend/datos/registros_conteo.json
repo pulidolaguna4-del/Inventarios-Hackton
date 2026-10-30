@@ -1,1 +1,134 @@
-[]
+[
+  {
+    "fecha": "2026-10-30",
+    "responsable": "darwin",
+    "sorteo": 1,
+    "semana": 44,
+    "sku": 200026,
+    "codigo_ubicacion": "C4-F09-N2",
+    "cantidad_sistema": 9,
+    "cantidad_contada": 6,
+    "diferencia": -3
+  },
+  {
+    "fecha": "2026-10-30",
+    "responsable": "darwin",
+    "sorteo": 1,
+    "semana": 44,
+    "sku": 100026,
+    "codigo_ubicacion": "C3-F09-N1",
+    "cantidad_sistema": 68,
+    "cantidad_contada": 66,
+    "diferencia": -2
+  },
+  {
+    "fecha": "2026-10-30",
+    "responsable": "darwin",
+    "sorteo": 1,
+    "semana": 44,
+    "sku": 100023,
+    "codigo_ubicacion": "C3-F06-N1",
+    "cantidad_sistema": 40,
+    "cantidad_contada": 40,
+    "diferencia": 0
+  },
+  {
+    "fecha": "2026-10-30",
+    "responsable": "darwin",
+    "sorteo": 1,
+    "semana": 44,
+    "sku": 100025,
+    "codigo_ubicacion": "C1-F07-N1",
+    "cantidad_sistema": 18,
+    "cantidad_contada": 14,
+    "diferencia": -4
+  },
+  {
+    "fecha": "2026-10-30",
+    "responsable": "darwin",
+    "sorteo": 1,
+    "semana": 44,
+    "sku": 400014,
+    "codigo_ubicacion": "C1-F05-N1",
+    "cantidad_sistema": 145,
+    "cantidad_contada": 140,
+    "diferencia": -5
+  },
+  {
+    "fecha": "2026-10-30",
+    "responsable": "darwin",
+    "sorteo": 1,
+    "semana": 44,
+    "sku": 100016,
+    "codigo_ubicacion": "C2-F05-N1",
+    "cantidad_sistema": 24,
+    "cantidad_contada": 22,
+    "diferencia": -2
+  },
+  {
+    "fecha": "2026-10-30",
+    "responsable": "darwin",
+    "sorteo": 1,
+    "semana": 44,
+    "sku": 200029,
+    "codigo_ubicacion": "C6-F05-N2",
+    "cantidad_sistema": 131,
+    "cantidad_contada": 130,
+    "diferencia": -1
+  },
+  {
+    "fecha": "2026-10-30",
+    "responsable": "darwin",
+    "sorteo": 1,
+    "semana": 44,
+    "sku": 200032,
+    "codigo_ubicacion": "C6-F04-N1",
+    "cantidad_sistema": 44,
+    "cantidad_contada": 43,
+    "diferencia": -1
+  },
+  {
+    "fecha": "2026-10-30",
+    "responsable": "darwin",
+    "sorteo": 1,
+    "semana": 44,
+    "sku": 200015,
+    "codigo_ubicacion": "C5-F04-N1",
+    "cantidad_sistema": 53,
+    "cantidad_contada": 53,
+    "diferencia": 0
+  },
+  {
+    "fecha": "2026-10-30",
+    "responsable": "darwin",
+    "sorteo": 1,
+    "semana": 44,
+    "sku": 400019,
+    "codigo_ubicacion": "C4-F02-N1",
+    "cantidad_sistema": 57,
+    "cantidad_contada": 56,
+    "diferencia": -1
+  },
+  {
+    "fecha": "2026-10-30",
+    "responsable": "darwin",
+    "sorteo": 1,
+    "semana": 44,
+    "sku": 400015,
+    "codigo_ubicacion": "C6-F01-N1",
+    "cantidad_sistema": 95,
+    "cantidad_contada": 90,
+    "diferencia": -5
+  },
+  {
+    "fecha": "2026-10-30",
+    "responsable": "darwin",
+    "sorteo": 1,
+    "semana": 44,
+    "sku": 400007,
+    "codigo_ubicacion": "C7-F02-N2",
+    "cantidad_sistema": 148,
+    "cantidad_contada": 140,
+    "diferencia": -8
+  }
+]
