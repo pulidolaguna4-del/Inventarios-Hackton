@@ -28,6 +28,8 @@ export interface GrupoRecorrido {
   recorrido: number;
   paradas: number;
   distancia_m: number;
+  /** Tiempo total del recorrido (caminar + paradas). */
+  tiempo_s: number;
   filas: FilaRecorrido[];
 }
 
@@ -60,21 +62,9 @@ export function gruposDelRecorrido(picking: PickingConTrazado): GrupoRecorrido[]
         };
       });
     });
-    return { recorrido: recorrido.recorrido, paradas: eventos.length, distancia_m: recorrido.distancia_m, filas };
+    return { recorrido: recorrido.recorrido, paradas: eventos.length, distancia_m: recorrido.distancia_m, tiempo_s: recorrido.tiempo_total_s, filas };
   });
 }
 
 /** "T", "3T"… */
 export const textoVecesT = (veces: number) => (veces === 1 ? 'T' : `${veces}T`);
-
-/**
- * Centra `elemento` dentro de `contenedor` asignando solo el scrollTop del contenedor:
- * no mueve la ventana ni otros contenedores (scrollIntoView sí lo haría). El desplazamiento
- * suave lo da el CSS del contenedor (`scroll-smooth`, que se apaga con prefers-reduced-motion).
- */
-export function centrarEnContenedor(contenedor: HTMLElement, elemento: HTMLElement) {
-  const caja = contenedor.getBoundingClientRect();
-  const fila = elemento.getBoundingClientRect();
-  const destino = contenedor.scrollTop + (fila.top - caja.top) - (contenedor.clientHeight - fila.height) / 2;
-  contenedor.scrollTop = Math.max(0, destino);
-}

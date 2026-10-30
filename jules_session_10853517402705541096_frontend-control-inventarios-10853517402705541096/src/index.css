@@ -121,3 +121,161 @@
     transition: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Tabla reutilizable (components/ui/Tabla.tsx) e Insignia
+ *
+ * Decisión del equipo (30/10/2026): las tablas SÍ van redondeadas, con colores
+ * suavizados y animaciones. Todos sus colores son variables: el rediseño general
+ * solo cambia estos valores.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  --tabla-superficie: #ffffff;
+  --tabla-borde: rgb(23 24 26 / 0.08);
+  --tabla-sombra: 0 1px 2px rgb(23 24 26 / 0.04), 0 4px 16px rgb(23 24 26 / 0.05);
+  --tabla-encabezado: #f8f6f1;
+  --tabla-texto: #17181a;
+  --tabla-texto-atenuado: #78736a;
+  --tabla-hover: #f4f1ea;
+  --tabla-grupo: #f3f0e8;
+  --tabla-chip: #f1eee7;
+  --tabla-acento: #ff6b2c;
+  --tabla-input-borde: #d9d4c7;
+  --tabla-destello: #bfeccd;
+
+  --fila-normal: #fbfaf7;
+  --fila-aqui: color-mix(in srgb, var(--tabla-acento) 18%, white);
+  --fila-camino: color-mix(in srgb, var(--tabla-acento) 8%, white);
+  --fila-visitada: #eaf6ee;
+  --fila-pendiente: #f2f1ed;
+
+  --insignia-neutro-fondo: #ecebe6;
+  --insignia-neutro-texto: #4a473f;
+  --insignia-acento-fondo: color-mix(in srgb, var(--tabla-acento) 20%, white);
+  --insignia-acento-texto: #9a3a0e;
+  --insignia-exito-fondo: #dcf2e3;
+  --insignia-exito-texto: #1f6b3a;
+  --insignia-aviso-fondo: #fdf0cf;
+  --insignia-aviso-texto: #7a5300;
+  --insignia-peligro-fondo: #fde2e1;
+  --insignia-peligro-texto: #9b1c1c;
+}
+
+.tabla-contenedor {
+  background: var(--tabla-superficie);
+  border: 1px solid var(--tabla-borde);
+  border-radius: 16px;
+  box-shadow: var(--tabla-sombra);
+  overflow: hidden;
+}
+/* Scroll interno (vertical con altoMaximo, horizontal en pantallas angostas). */
+.tabla-scroll { overflow: auto; padding: 0 8px 4px; scroll-behavior: smooth; }
+
+.tabla { width: 100%; border-collapse: separate; border-spacing: 0 4px; font-size: 14px; color: var(--tabla-texto); }
+.tabla th[scope="col"] {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--tabla-encabezado);
+  padding: 10px 12px;
+  font-size: 12px; font-weight: 500; text-align: left;
+  color: var(--tabla-texto-atenuado);
+  white-space: nowrap;
+}
+.tabla th[scope="col"]:first-child { border-radius: 0 0 0 10px; }
+.tabla th[scope="col"]:last-child { border-radius: 0 0 10px 0; }
+.tabla .tabla-derecha { text-align: right; font-variant-numeric: tabular-nums; }
+.tabla .tabla-centro { text-align: center; }
+
+/* Filas como píldoras: cada celda toma el fondo del tono y las puntas se redondean. */
+.tabla-fila { --fila-fondo: var(--fila-normal); }
+.tabla-fila > td {
+  background: var(--fila-fondo);
+  height: 54px; padding: 0 12px;
+  transition: background-color 300ms ease;
+}
+.tabla[data-densidad="compacta"] .tabla-fila > td { height: 40px; }
+.tabla-fila > td:first-child { border-radius: 10px 0 0 10px; }
+.tabla-fila > td:last-child { border-radius: 0 10px 10px 0; }
+.tabla-fila.es-clicable { cursor: pointer; }
+.tabla-fila.es-clicable:hover > td { background: color-mix(in srgb, var(--fila-fondo), #17181a 5%); transition-duration: 150ms; }
+.tabla-fila[data-tono="normal"].es-clicable:hover > td { background: var(--tabla-hover); }
+.tabla-fila:focus-visible { outline: 2px solid var(--tabla-acento); outline-offset: -2px; border-radius: 10px; }
+
+.tabla-fila[data-tono="aqui"] { --fila-fondo: var(--fila-aqui); font-weight: 600; }
+.tabla-fila[data-tono="aqui"] > td:first-child { box-shadow: inset 4px 0 0 var(--tabla-acento); }
+.tabla-fila[data-tono="camino"] { --fila-fondo: var(--fila-camino); }
+.tabla-fila[data-tono="visitada"] { --fila-fondo: var(--fila-visitada); }
+.tabla-fila[data-tono="pendiente"] { --fila-fondo: var(--fila-pendiente); color: var(--tabla-texto-atenuado); }
+
+/* Encabezado de grupo plegable. */
+.tabla-grupo > th { padding: 8px 0 2px; text-align: left; font-weight: 400; }
+.tabla-grupo-boton {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 12px; border-radius: 10px;
+  background: var(--tabla-grupo); color: var(--tabla-texto);
+  font-size: 13px; cursor: pointer; text-align: left;
+}
+.tabla-grupo-boton:focus-visible { outline: 2px solid var(--tabla-acento); outline-offset: 1px; }
+.tabla-chevron { transition: transform 200ms ease; flex-shrink: 0; }
+.tabla-grupo-boton[aria-expanded="false"] .tabla-chevron { transform: rotate(-90deg); }
+
+.tabla-vacio { padding: 40px 12px; text-align: center; color: var(--tabla-texto-atenuado); }
+.tabla-pie { border-top: 1px solid var(--tabla-borde); padding: 10px 16px; font-size: 12px; color: var(--tabla-texto-atenuado); }
+
+/* Piezas para usar dentro de las celdas. */
+.tabla-chip {
+  display: inline-block; padding: 2px 7px; border-radius: 6px;
+  background: var(--tabla-chip);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 500; white-space: nowrap;
+}
+.tabla input, .tabla select {
+  height: 34px; padding: 0 10px; border-radius: 10px;
+  border: 1px solid var(--tabla-input-borde); background: var(--tabla-superficie);
+  font-family: var(--font-mono); font-size: 14px; color: var(--tabla-texto);
+  transition: box-shadow 150ms ease, border-color 150ms ease;
+}
+.tabla input:focus, .tabla select:focus {
+  outline: none; border-color: var(--tabla-acento);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tabla-acento) 30%, transparent);
+}
+.tabla-punto { display: inline-block; width: 8px; height: 8px; border-radius: 999px; background: var(--tabla-acento); }
+.tabla-esqueleto {
+  display: block; height: 12px; border-radius: 6px;
+  background: linear-gradient(90deg, var(--tabla-chip) 25%, var(--tabla-superficie) 50%, var(--tabla-chip) 75%);
+  background-size: 200% 100%;
+}
+
+.insignia {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 9px; border-radius: 999px;
+  font-size: 11px; font-weight: 600; line-height: 18px; white-space: nowrap;
+  background: var(--insignia-fondo); color: var(--insignia-texto);
+}
+.insignia[data-tono="neutro"] { --insignia-fondo: var(--insignia-neutro-fondo); --insignia-texto: var(--insignia-neutro-texto); }
+.insignia[data-tono="acento"] { --insignia-fondo: var(--insignia-acento-fondo); --insignia-texto: var(--insignia-acento-texto); }
+.insignia[data-tono="exito"] { --insignia-fondo: var(--insignia-exito-fondo); --insignia-texto: var(--insignia-exito-texto); }
+.insignia[data-tono="aviso"] { --insignia-fondo: var(--insignia-aviso-fondo); --insignia-texto: var(--insignia-aviso-texto); }
+.insignia[data-tono="peligro"] { --insignia-fondo: var(--insignia-peligro-fondo); --insignia-texto: var(--insignia-peligro-texto); }
+
+/* Animaciones de la tabla (todas se apagan con prefers-reduced-motion). */
+@keyframes tabla-entrar { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes tabla-pulso { from { background-color: color-mix(in srgb, var(--tabla-acento) 45%, white); } }
+@keyframes tabla-latido { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.6); opacity: 0.45; } }
+@keyframes tabla-destello { from { background-color: var(--tabla-destello); } to { background-color: transparent; } }
+@keyframes tabla-temblor { 0%, 100% { transform: none; } 20%, 60% { transform: translateX(-4px); } 40%, 80% { transform: translateX(4px); } }
+@keyframes tabla-brillo { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+.tabla-fila { animation: tabla-entrar 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both; animation-delay: var(--retraso, 0ms); }
+.tabla-fila[data-tono="aqui"] > td { animation: tabla-pulso 900ms ease-out 1; }
+.tabla-punto { animation: tabla-latido 1.2s ease-in-out infinite; }
+.tabla-destello { border-radius: 8px; animation: tabla-destello 1s ease-out 1; }
+.tabla-temblor { animation: tabla-temblor 350ms ease 1; }
+.tabla-esqueleto { animation: tabla-brillo 1.4s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tabla-scroll { scroll-behavior: auto; }
+  .tabla-fila, .tabla-fila > td, .tabla-punto, .tabla-destello, .tabla-temblor, .tabla-esqueleto, .tabla-chevron, .tabla input {
+    animation: none;
+    transition: none;
+  }
+}

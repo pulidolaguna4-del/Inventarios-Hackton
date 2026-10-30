@@ -53,7 +53,7 @@ function textoOrigen(picking: PickingConTrazado, vista: VistaMapa, origen: Orige
   return `Tarea 6 · ${ubicaciones} paradas · ${cola}`;
 }
 
-/** Tabla de trayectos: resumen por recorrido (distancia y tiempos) debajo de la tabla del recorrido. */
+/** Tabla de trayectos: resumen por recorrido (distancia y tiempos). Solo se muestra como respaldo sin WebGL. */
 const TablaTrayectos: React.FC<{ picking: PickingConTrazado }> = ({ picking }) => (
   <div className="bg-slate-50 border border-slate-200 overflow-x-auto">
     <table className="w-full text-left border-collapse text-sm min-w-[760px]">
@@ -250,7 +250,7 @@ export const Recorrido: React.FC = () => {
     }
     const parada = paradasLinea.find((p) => claveParada(p) === fila.clave_parada);
     if (parada) irA(parada.t_inicio, paradasLinea);
-    if (fila.sku !== null && origen === 'sorteo') conteo.enfocar(fila.sku);
+    if (fila.sku !== null && origen === 'sorteo') conteo.acciones.enfocar(fila.sku);
   };
   /** Clic en una celda del 3D: se selecciona su fila. */
   const elegirCelda = (codigo: string) => {
@@ -425,8 +425,13 @@ export const Recorrido: React.FC = () => {
           )}
 
           <div className="space-y-3">
-            <h3 className="font-bold text-base">Trayectos · {datos?.layout.nombre}</h3>
-            <TablaTrayectos picking={picking} />
+            {/* Respaldo sin WebGL: el resumen de trayectos (con mapa, la tabla del recorrido ya lo cuenta). */}
+            {!webgl && (
+              <>
+                <h3 className="font-bold text-base">Trayectos · {datos?.layout.nombre}</h3>
+                <TablaTrayectos picking={picking} />
+              </>
+            )}
             <div className="flex items-start gap-2 p-4 bg-slate-50 border border-slate-200 text-xs leading-relaxed text-slate-600">
               <Info className="w-4 h-4 shrink-0 mt-0.5" />
               <span>

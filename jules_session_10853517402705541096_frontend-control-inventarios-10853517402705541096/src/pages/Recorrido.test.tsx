@@ -84,7 +84,7 @@ describe('Paso 2: Recorrido y conteo', () => {
     abrir();
     expect(await screen.findByText(/no puede dibujar gráficos 3D/)).toBeTruthy();
     expect(await screen.findByText('Sorteo 8 · 2 referencias · 1 recorrido · método exacto')).toBeTruthy();
-    expect(screen.getByText(/RECORRIDO 1 · 2 paradas · 4 m/)).toBeTruthy();
+    expect(screen.getByText(/· 2 paradas · 4 m · 0:44/)).toBeTruthy();
     expect(screen.getByText('Trayectos · Bodega Arauca')).toBeTruthy();
     const campos = await screen.findAllByLabelText(/Cantidad contada de/);
     expect(campos.map((campo) => campo.getAttribute('aria-label'))).toEqual(['Cantidad contada de 200011', 'Cantidad contada de 100003']);
@@ -103,12 +103,14 @@ describe('Paso 2: Recorrido y conteo', () => {
 
   it('el estado de cada fila sale de la animación y el clic en una fila salta a esa parada y enfoca "contada"', async () => {
     abrir();
-    const filas = () => screen.getAllByRole('row').filter((fila) => fila.hasAttribute('data-aqui'));
+    const filas = () => screen.getAllByRole('row').filter((fila) => fila.hasAttribute('data-tono'));
     await screen.findAllByLabelText(/Cantidad contada de/);
     // Al inicio el carrito va hacia la primera parada.
     expect(filas().map((fila) => within(fila).getByText(/Pendiente|En camino|Aquí|Visitada/).textContent)).toEqual(['En camino', 'Pendiente']);
     fireEvent.click(within(filas()[1]).getByText('Ref 100003'));
     await waitFor(() => expect(filas().map((fila) => within(fila).getByText(/Pendiente|En camino|Aquí|Visitada/).textContent)).toEqual(['Visitada', 'Aquí']));
+    expect(filas().map((fila) => fila.dataset.tono)).toEqual(['visitada', 'aqui']);
+    expect(filas()[1].getAttribute('aria-current')).toBe('true');
     expect(document.activeElement).toBe(screen.getByLabelText('Cantidad contada de 100003'));
   });
 

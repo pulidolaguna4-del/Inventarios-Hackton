@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../services/api';
 import { guardarResponsable, leerResponsableGuardado } from '../utils/responsable';
 import type { RegistroConteo, SorteoConteo } from '../types/inventario';
@@ -7,6 +7,22 @@ import type { RegistroConteo, SorteoConteo } from '../types/inventario';
 export interface FilaContable {
   sku: number;
   cantidad_sistema: number | null;
+}
+
+/** Error de una fila; `numero` cambia con cada error nuevo (para repetir la animación). */
+export interface ErrorConteo {
+  texto: string;
+  numero: number;
+}
+
+/** Acciones del conteo. Son estables (la misma función en cada render): sirven en columnas memorizadas. */
+export interface AccionesConteo {
+  cambiarSistema: (sku: number, texto: string) => void;
+  cambiarContada: (sku: number, texto: string) => void;
+  guardar: (fila: FilaContable) => Promise<void>;
+  /** Ref para el campo "contada" de un SKU (para mover el foco). */
+  refCampo: (sku: number) => (elemento: HTMLInputElement | null) => void;
+  enfocar: (sku: number) => void;
 }
 
 /**
@@ -18,7 +34,7 @@ export function useConteoSorteo(sorteo: SorteoConteo | null, filas: FilaContable
   const [responsable, setResponsable] = useState(leerResponsableGuardado);
   const [sistema, setSistema] = useState<Record<number, string>>({});
   const [contada, setContada] = useState<Record<number, string>>({});
-  const [errores, setErrores] = useState<Record<number, string>>({});
+  const [errores, setErrores] = useState<Record<number, ErrorConteo>>({});
   const [guardando, setGuardando] = useState<number | null>(null);
   // Registros guardados en esta pantalla: se muestran sin esperar a que se recargue el sorteo.
   // Son de un sorteo: al cambiar de sorteo no se arrastran (un SKU puede salir en varios).
@@ -39,30 +55,19 @@ export function useConteoSorteo(sorteo: SorteoConteo | null, filas: FilaContable
 
   const textoSistema = (fila: FilaContable) => sistema[fila.sku] ?? String(fila.cantidad_sistema ?? '');
 
-  /** Ref para el campo "contada" de un SKU (para mover el foco). */
-  const refCampo = (sku: number) => (elemento: HTMLInputElement | null) => {
-    if (elemento) campos.current.set(sku, elemento);
-    else campos.current.delete(sku);
-  };
-  // Sin mover la página: la tabla centra la fila en su propio contenedor al recibir el foco.
-  const enfocar = (sku: number) => campos.current.get(sku)?.focus({ preventScroll: true });
+  const ponerError = (sku: number, texto: string) =>
+    setErrores((previos) => ({ ...previos, [sku]: { texto, numero: (previos[sku]?.numero ?? 0) + 1 } }));
 
-  /** Pasa el foco a la siguiente referencia sin contar (después de la actual, o la primera que quede). */
-  const enfocarSiguiente = (indiceActual: number, yaContadas: Set<number>) => {
-    const pendientes = filas.map((fila, indice) => ({ fila, indice })).filter(({ fila }) => !yaContadas.has(fila.sku));
-    const siguiente = pendientes.find(({ indice }) => indice > indiceActual) ?? pendientes[0];
-    if (siguiente) enfocar(siguiente.fila.sku);
-  };
-
+  /** Guarda el conteo de una fila (lee siempre el estado más reciente: ver `ultimo`). */
   const guardar = async (fila: FilaContable) => {
     if (!sorteo) return;
     const { sku } = fila;
     const indice = filas.findIndex((f) => f.sku === sku);
     const textoContada = contada[sku] ?? '';
     const sistemaEscrito = textoSistema(fila);
-    if (sinResponsable) return setErrores({ ...errores, [sku]: 'Escribe arriba quién está contando.' });
+    if (sinResponsable) return ponerError(sku, 'Escribe arriba quién está contando.');
     if (textoContada === '' || !Number.isInteger(Number(textoContada)) || Number(textoContada) < 0) {
-      return setErrores({ ...errores, [sku]: 'La cantidad contada debe ser un entero de 0 en adelante.' });
+      return ponerError(sku, 'La cantidad contada debe ser un entero de 0 en adelante.');
     }
     setGuardando(sku);
     try {
@@ -80,31 +85,49 @@ export function useConteoSorteo(sorteo: SorteoConteo | null, filas: FilaContable
         delete resto[sku];
         return resto;
       });
-      const yaContadas = new Set(filas.map((f) => f.sku).filter((s) => nuevos[s] || registroDe(s)));
-      enfocarSiguiente(indice, yaContadas);
+      // Pasa el foco a la siguiente referencia sin contar (después de esta, o la primera que quede).
+      const pendientes = filas.map((f, i) => ({ f, i })).filter(({ f }) => !nuevos[f.sku] && !registroDe(f.sku));
+      const siguiente = pendientes.find(({ i }) => i > indice) ?? pendientes[0];
+      if (siguiente) campos.current.get(siguiente.f.sku)?.focus({ preventScroll: true });
       await alGuardar();
     } catch (e) {
-      setErrores({ ...errores, [sku]: e instanceof Error ? e.message : String(e) });
+      ponerError(sku, e instanceof Error ? e.message : String(e));
     } finally {
       setGuardando(null);
     }
   };
+
+  // `guardar` cambia en cada render (lee el estado actual); las acciones públicas son estables
+  // y llaman siempre a la versión más reciente.
+  const ultimo = useRef(guardar);
+  useEffect(() => {
+    ultimo.current = guardar;
+  });
+  const [acciones] = useState<AccionesConteo>(() => ({
+    cambiarSistema: (sku, texto) => setSistema((previos) => ({ ...previos, [sku]: texto })),
+    cambiarContada: (sku, texto) => setContada((previos) => ({ ...previos, [sku]: texto })),
+    guardar: (fila) => ultimo.current(fila),
+    refCampo: (sku) => (elemento) => {
+      if (elemento) campos.current.set(sku, elemento);
+      else campos.current.delete(sku);
+    },
+    // Sin mover la página: la tabla se encarga de su propio scroll.
+    enfocar: (sku) => campos.current.get(sku)?.focus({ preventScroll: true }),
+  }));
 
   return {
     responsable,
     cambiarResponsable,
     sinResponsable,
     registroDe,
+    /** true si el SKU se guardó en esta pantalla (para el destello verde). */
+    recienGuardado: (sku: number) => sku in guardados,
     contadas,
     textoSistema,
-    cambiarSistema: (sku: number, texto: string) => setSistema({ ...sistema, [sku]: texto }),
     textoContada: (sku: number) => contada[sku] ?? '',
-    cambiarContada: (sku: number, texto: string) => setContada({ ...contada, [sku]: texto }),
     errores,
     guardando,
-    guardar,
-    refCampo,
-    enfocar,
+    acciones,
   };
 }
 
