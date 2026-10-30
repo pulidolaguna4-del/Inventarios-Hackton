@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { construirLinea, estadoEnTiempo, formatearTiempo, ubicacionesPorEstado } from './animacion';
+import {
+  claveParada,
+  construirLinea,
+  estadoEnTiempo,
+  estadoParada,
+  formatearTiempo,
+  paradaActivaEnTiempo,
+  paradasDeLinea,
+  ubicacionesPorEstado,
+} from './animacion';
 import type { RecorridoConTrazado } from '../types/inventario';
 
 /** Recorrido de prueba: avanza 10 m hacia +y, recoge 20 s y vuelve 10 m. */
@@ -81,10 +90,29 @@ describe('Animación del carrito como función del tiempo', () => {
   });
 
   it('separa las ubicaciones visitadas de las pendientes', () => {
-    const linea = construirLinea(recorridos, 'todos');
-    const { visitadas, pendientes } = ubicacionesPorEstado(linea, 50);
+    const paradas = paradasDeLinea(construirLinea(recorridos, 'todos'));
+    const { visitadas, pendientes } = ubicacionesPorEstado(paradas, paradaActivaEnTiempo(paradas, 50));
     expect([...visitadas]).toEqual(['C1-F08-N1']);
     expect([...pendientes]).toEqual(['C2-F08-N1']);
+  });
+
+  it('la parada activa pasa de "en camino" a "aquí" y luego a la siguiente', () => {
+    const paradas = paradasDeLinea(construirLinea(recorridos, 'todos'));
+    expect(paradas.map(claveParada)).toEqual(['1-1', '2-1']);
+    expect(paradaActivaEnTiempo(paradas, 0)).toEqual({ indice: 0, fase: 'en_camino' });
+    expect(paradaActivaEnTiempo(paradas, 10)).toEqual({ indice: 0, fase: 'aqui' });
+    expect(paradaActivaEnTiempo(paradas, 29.9)).toEqual({ indice: 0, fase: 'aqui' });
+    // Al terminar la recogida, el carrito ya va hacia la parada del recorrido 2.
+    expect(paradaActivaEnTiempo(paradas, 30)).toEqual({ indice: 1, fase: 'en_camino' });
+    expect(paradaActivaEnTiempo(paradas, 55)).toEqual({ indice: 1, fase: 'aqui' });
+    expect(paradaActivaEnTiempo(paradas, 75)).toEqual({ indice: 2, fase: 'terminado' });
+  });
+
+  it('el estado de cada parada sale de la parada activa', () => {
+    const activa = { indice: 1, fase: 'aqui' } as const;
+    expect([0, 1, 2].map((i) => estadoParada(i, activa))).toEqual(['visitada', 'aqui', 'pendiente']);
+    expect(estadoParada(1, { indice: 1, fase: 'en_camino' })).toBe('en_camino');
+    expect(estadoParada(0, { indice: 1, fase: 'terminado' })).toBe('visitada');
   });
 
   it('formatea el tiempo como m:ss', () => {

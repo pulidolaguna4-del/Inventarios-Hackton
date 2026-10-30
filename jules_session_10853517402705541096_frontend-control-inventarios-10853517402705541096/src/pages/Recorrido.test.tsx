@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { Recorrido } from './Recorrido';
 import { ProveedorProgreso } from '../hooks/ProgresoContexto';
@@ -12,7 +12,8 @@ vi.mock('../components/mapa/constantes', async (original) => ({
 vi.mock('../components/mapa/Escena3D', () => ({ Escena3D: () => null }));
 
 const tramo = { tipo: 'tramo', tipo_tramo: 'pasillo', punto_inicio: { x: 0, y: 0 }, punto_fin: { x: 0, y: 2 }, distancia_m: 2, distancia_acum_inicio_m: 0, distancia_acum_fin_m: 2, tiempo_inicio_s: 0, tiempo_fin_s: 2 };
-const parada = (orden: number) => ({ tipo: 'parada', orden, etiqueta: String(orden), niveles: [1], ubicaciones: [], punto: { x: 0, y: 2 }, tiempo_recogida_s: 20, distancia_acum_m: 2, tiempo_inicio_s: 2, tiempo_fin_s: 22 });
+// Parada 1 de 2 a 22 s y parada 2 de 22 a 42 s.
+const parada = (orden: number) => ({ tipo: 'parada', orden, etiqueta: String(orden), niveles: [1], ubicaciones: [], punto: { x: 0, y: 2 }, tiempo_recogida_s: 20, distancia_acum_m: 2, tiempo_inicio_s: 2 + (orden - 1) * 20, tiempo_fin_s: 22 + (orden - 1) * 20 });
 const item = (sku: number, codigo: string) => ({ sku, descripcion: `Ref ${sku}`, nivel: 1, codigo_ubicacion: codigo, cantidad: null, cantidad_sistema: 9 });
 
 // El recorrido visita primero 200011 y después 100003, aunque el sorteo los lista al revés.
@@ -43,7 +44,15 @@ const registrarConteo = vi.fn();
 
 vi.mock('../services/api', () => ({
   api: {
-    obtenerProgresoConteo: () => Promise.resolve({ sorteo_actual: 8, sorteos: [{ numero: 8, tamano: 2, registrados: 0 }] }),
+    obtenerProgresoConteo: () =>
+      Promise.resolve({
+        sorteo_actual: 8,
+        sorteos: [
+          { numero: 7, fecha_hora: '2026-10-28T10:00:00', periodo: 5, tamano: 12, registrados: 12 },
+          { numero: 8, fecha_hora: '2026-10-29T09:44:29', periodo: 5, tamano: 2, registrados: 0 },
+        ],
+        periodos: [{ numero: 5, nombre: 'Oct–Dic' }],
+      }),
     obtenerLayout: () => Promise.resolve({ nombre: 'Bodega Arauca' }),
     obtenerRecorridos: () => Promise.resolve(picking),
     obtenerSorteo: () => Promise.resolve(sorteo),
@@ -74,7 +83,8 @@ describe('Paso 2: Recorrido y conteo', () => {
   it('sin WebGL muestra el aviso, el método, la tabla y el conteo en el orden del recorrido', async () => {
     abrir();
     expect(await screen.findByText(/no puede dibujar gráficos 3D/)).toBeTruthy();
-    expect(screen.getByText(/método: exacto · 2 paradas · 1 recorridos/)).toBeTruthy();
+    expect(await screen.findByText('Sorteo 8 · 2 referencias · 1 recorrido · método exacto')).toBeTruthy();
+    expect(screen.getByText(/RECORRIDO 1 · 2 paradas · 4 m/)).toBeTruthy();
     expect(screen.getByText('Trayectos · Bodega Arauca')).toBeTruthy();
     const campos = await screen.findAllByLabelText(/Cantidad contada de/);
     expect(campos.map((campo) => campo.getAttribute('aria-label'))).toEqual(['Cantidad contada de 200011', 'Cantidad contada de 100003']);
@@ -87,8 +97,27 @@ describe('Paso 2: Recorrido y conteo', () => {
     fireEvent.change(primero, { target: { value: '7' } });
     fireEvent.keyDown(primero, { key: 'Enter' });
     await waitFor(() => expect(registrarConteo).toHaveBeenCalledWith({ sorteo: 8, sku: 200011, responsable: 'darwin', cantidad_contada: 7, cantidad_sistema: 9 }));
-    expect(await screen.findByText(/diferencia -2/)).toBeTruthy();
+    expect(await screen.findByText("(dif. -2)")).toBeTruthy();
     await waitFor(() => expect(document.activeElement).toBe(segundo));
+  });
+
+  it('el estado de cada fila sale de la animación y el clic en una fila salta a esa parada y enfoca "contada"', async () => {
+    abrir();
+    const filas = () => screen.getAllByRole('row').filter((fila) => fila.hasAttribute('data-aqui'));
+    await screen.findAllByLabelText(/Cantidad contada de/);
+    // Al inicio el carrito va hacia la primera parada.
+    expect(filas().map((fila) => within(fila).getByText(/Pendiente|En camino|Aquí|Visitada/).textContent)).toEqual(['En camino', 'Pendiente']);
+    fireEvent.click(within(filas()[1]).getByText('Ref 100003'));
+    await waitFor(() => expect(filas().map((fila) => within(fila).getByText(/Pendiente|En camino|Aquí|Visitada/).textContent)).toEqual(['Visitada', 'Aquí']));
+    expect(document.activeElement).toBe(screen.getByLabelText('Cantidad contada de 100003'));
+  });
+
+  it('el selector lista los sorteos con su progreso y "Seleccionar" cambia el sorteo', async () => {
+    abrir();
+    expect(await screen.findByText('12 de 12 contadas')).toBeTruthy();
+    expect(screen.getByText('EN EL MAPA')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Seleccionar sorteo 7' }));
+    expect(await screen.findByRole('button', { name: 'Seleccionar sorteo 8' })).toBeTruthy();
   });
 
   it('en la vista maqueta, el origen sorteo muestra un aviso en vez de un recorrido vacío', async () => {

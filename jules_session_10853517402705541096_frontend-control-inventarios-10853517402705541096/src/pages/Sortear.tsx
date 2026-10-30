@@ -10,14 +10,10 @@ import { useApi } from '../hooks/useApi';
 import { useProgreso } from '../hooks/ProgresoContexto';
 import { api } from '../services/api';
 import { guardarResponsable, leerResponsableGuardado } from '../utils/responsable';
+import { formatearFechaHora } from '../utils/formato';
 import type { ReferenciaSorteo } from '../types/inventario';
 
 type Pestana = 'PENDIENTES' | 'CONTADAS' | 'TODAS';
-
-/** Fecha y hora del sorteo para mostrar: '2026-10-28T10:20:17' -> '2026-10-28 10:20'. */
-function formatearFechaHora(fechaHora: string): string {
-  return fechaHora.replace('T', ' ').slice(0, 16);
-}
 
 /**
  * Paso 1 del flujo: el botón "Sortear" elige referencias al azar (ninguna pasa de 5 conteos

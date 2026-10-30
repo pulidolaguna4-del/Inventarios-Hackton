@@ -112,15 +112,62 @@ export function estadoEnTiempo(linea: LineaDeTiempo, t: number): EstadoCarrito |
   };
 }
 
-/** Códigos de ubicación de las paradas de la línea, separados en ya visitados y pendientes. */
-export function ubicacionesPorEstado(linea: LineaDeTiempo, t: number): { visitadas: Set<string>; pendientes: Set<string> } {
+// ---------------------------------------------------------------------------
+// Paradas de la línea: sincronía entre la animación y la tabla del recorrido
+// ---------------------------------------------------------------------------
+
+/** Una parada de la línea de tiempo, en el orden en que el carrito la visita. */
+export type ParadaLinea = EventoParada & EventoLinea;
+
+/** Las paradas de la línea, en orden de visita. */
+export function paradasDeLinea(linea: LineaDeTiempo): ParadaLinea[] {
+  return linea.eventos.filter((evento): evento is ParadaLinea => evento.tipo === 'parada');
+}
+
+/** Identifica una parada: "recorrido-orden". */
+export const claveParada = (parada: { recorrido: number; orden: number }) => `${parada.recorrido}-${parada.orden}`;
+
+/** Dónde está el carrito respecto a la parada `indice`: yendo hacia ella o detenido en ella. */
+export type FaseParada = 'en_camino' | 'aqui' | 'terminado';
+
+export interface ParadaActiva {
+  /** Índice en `paradasDeLinea`: la primera parada que todavía no termina (o el total si ya no queda ninguna). */
+  indice: number;
+  fase: FaseParada;
+}
+
+/** Parada activa en el instante t (búsqueda binaria: se puede llamar en cada cuadro). */
+export function paradaActivaEnTiempo(paradas: ParadaLinea[], t: number): ParadaActiva {
+  let bajo = 0;
+  let alto = paradas.length;
+  while (bajo < alto) {
+    const medio = (bajo + alto) >> 1;
+    if (paradas[medio].t_fin <= t) bajo = medio + 1;
+    else alto = medio;
+  }
+  if (bajo >= paradas.length) return { indice: paradas.length, fase: 'terminado' };
+  return { indice: bajo, fase: t >= paradas[bajo].t_inicio ? 'aqui' : 'en_camino' };
+}
+
+export const mismaParadaActiva = (a: ParadaActiva, b: ParadaActiva) => a.indice === b.indice && a.fase === b.fase;
+
+export type EstadoParada = 'pendiente' | 'en_camino' | 'aqui' | 'visitada';
+
+/** Estado de la parada `indice` según la parada activa. */
+export function estadoParada(indice: number, activa: ParadaActiva): EstadoParada {
+  if (indice < activa.indice) return 'visitada';
+  if (indice > activa.indice) return 'pendiente';
+  return activa.fase === 'aqui' ? 'aqui' : 'en_camino';
+}
+
+/** Códigos de ubicación de las paradas, separados en ya visitados y pendientes según la parada activa. */
+export function ubicacionesPorEstado(paradas: ParadaLinea[], activa: ParadaActiva): { visitadas: Set<string>; pendientes: Set<string> } {
   const visitadas = new Set<string>();
   const pendientes = new Set<string>();
-  for (const evento of linea.eventos) {
-    if (evento.tipo !== 'parada') continue;
-    const destino = evento.t_fin <= t ? visitadas : pendientes;
-    for (const ubicacion of (evento as EventoParada).ubicaciones) destino.add(ubicacion.codigo_ubicacion);
-  }
+  paradas.forEach((parada, indice) => {
+    const destino = indice < activa.indice ? visitadas : pendientes;
+    for (const ubicacion of parada.ubicaciones) destino.add(ubicacion.codigo_ubicacion);
+  });
   return { visitadas, pendientes };
 }
 

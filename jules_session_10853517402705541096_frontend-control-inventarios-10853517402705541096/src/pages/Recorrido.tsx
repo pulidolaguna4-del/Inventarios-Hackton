@@ -1,59 +1,59 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Route, Info, AlertTriangle, Map as IconoMapa, Box, Navigation, ExternalLink, Cpu } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Route, Info, AlertTriangle } from 'lucide-react';
 import { Cargando, ErrorCarga } from '../components/ui/Estados';
 import { EncabezadoPagina } from '../components/ui/EncabezadoPagina';
 import { BotonSiguiente } from '../components/ui/BotonSiguiente';
 import { formatearNumero } from '../utils/formato';
 import { useApi } from '../hooks/useApi';
 import { useProgreso } from '../hooks/ProgresoContexto';
+import { useConteoSorteo } from '../hooks/useConteoSorteo';
 import { api } from '../services/api';
 import type { ConsultaRecorridos, OrigenPicking, PickingConTrazado, VistaMapa } from '../types/inventario';
-import { Escena3D, type ModoCamara, type ModoColor, type Reproduccion } from '../components/mapa/Escena3D';
-import { COLORES_ABC, COLORES_CATEGORIA, soportaWebGL } from '../components/mapa/constantes';
+import { Escena3D, type ModoCamara, type ModoColor } from '../components/mapa/Escena3D';
+import { soportaWebGL } from '../components/mapa/constantes';
 import { LineaTiempo } from '../components/mapa/LineaTiempo';
-import { PanelRecorrido } from '../components/mapa/PanelRecorrido';
-import { PanelConteo, type FilaConteo } from '../components/mapa/PanelConteo';
-import { construirLinea, estadoEnTiempo, ubicacionesPorEstado } from '../utils/animacion';
-
-const VISTAS: { valor: VistaMapa; etiqueta: string }[] = [
-  { valor: 'arauca', etiqueta: 'Bodega Arauca' },
-  { valor: 'maqueta', etiqueta: 'Maqueta' },
-];
+import { ControlesMapa, LeyendaMapa, ResumenOrigen, SelectorVista, TarjetaParada } from '../components/mapa/HudMapa';
+import { SelectorOrigen } from '../components/mapa/SelectorOrigen';
+import { TablaRecorrido } from '../components/mapa/TablaRecorrido';
+import { InstruccionesArduino } from '../components/mapa/InstruccionesArduino';
+import {
+  claveParada,
+  construirLinea,
+  mismaParadaActiva,
+  paradaActivaEnTiempo,
+  paradasDeLinea,
+  ubicacionesPorEstado,
+  type ParadaActiva,
+  type ParadaLinea,
+} from '../utils/animacion';
+import { Reloj } from '../utils/reloj';
+import { gruposDelRecorrido, type FilaRecorrido } from '../utils/tablaRecorrido';
 
 const ORIGENES: OrigenPicking[] = ['sorteo', 'prueba', 'lote'];
-
-const CAMARAS: { valor: ModoCamara; etiqueta: string; icono: typeof Box }[] = [
-  { valor: 'planta', etiqueta: 'Planta', icono: IconoMapa },
-  { valor: 'isometrica', etiqueta: 'Isométrica', icono: Box },
-  { valor: 'carrito', etiqueta: 'Carrito', icono: Navigation },
-];
 
 /** Cómo se muestra el método que eligió el backend según el tamaño del lote. */
 const NOMBRE_METODO: Record<string, string> = { exacto: 'exacto', heuristico: 'heurística', anillo: 'anillo de la maqueta' };
 
-const claseSegmento = (activo: boolean) =>
-  `h-10 px-3.5 text-xs font-bold uppercase tracking-wide border border-tinta -ml-px first:ml-0 cursor-pointer transition-colors ${
-    activo ? 'bg-tinta text-papel' : 'bg-slate-50 text-tinta hover:bg-white'
-  }`;
+const SIN_RESALTAR = new Set<string>();
 
 async function cargarVista(consulta: ConsultaRecorridos) {
   const [layout, picking] = await Promise.all([api.obtenerLayout(consulta.vista), api.obtenerRecorridos(consulta)]);
   return { layout, picking };
 }
 
-/** Referencias de la ruta de conteo en el orden en que el carrito las visita. */
-function filasEnOrdenDeRecorrido(picking: PickingConTrazado): FilaConteo[] {
-  return picking.recorridos.flatMap((recorrido) =>
-    recorrido.paradas.flatMap((parada, indice) =>
-      (parada.items ?? [])
-        .filter((item): item is FilaConteo['item'] => item.sku !== null)
-        .map((item) => ({ recorrido: recorrido.recorrido, orden: indice + 1, item })),
-    ),
-  );
+/** Resumen del HUD: "Sorteo 8 · 12 referencias · 4 recorridos · método exacto". */
+function textoOrigen(picking: PickingConTrazado, vista: VistaMapa, origen: OrigenPicking, referencias: number, sorteo?: number, fecha?: string): string {
+  const { recorridos, ubicaciones } = picking.totales;
+  const metodo = `método ${NOMBRE_METODO[picking.metodo] ?? picking.metodo}`;
+  const cola = `${recorridos} ${recorridos === 1 ? 'recorrido' : 'recorridos'} · ${metodo}`;
+  if (vista === 'maqueta') return `Maqueta del robot · ${ubicaciones} paradas · ${cola}`;
+  if (origen === 'sorteo') return `Sorteo ${sorteo ?? picking.sorteo ?? ''} · ${referencias} referencias · ${cola}`;
+  if (origen === 'lote') return `Pedidos del ${fecha ?? picking.fecha ?? ''} · ${referencias} referencias · ${cola}`;
+  return `Tarea 6 · ${ubicaciones} paradas · ${cola}`;
 }
 
-/** Tabla de trayectos: se ve siempre debajo del mapa y es el respaldo si no hay WebGL. */
+/** Tabla de trayectos: resumen por recorrido (distancia y tiempos) debajo de la tabla del recorrido. */
 const TablaTrayectos: React.FC<{ picking: PickingConTrazado }> = ({ picking }) => (
   <div className="bg-slate-50 border border-slate-200 overflow-x-auto">
     <table className="w-full text-left border-collapse text-sm min-w-[760px]">
@@ -110,9 +110,13 @@ const TablaTrayectos: React.FC<{ picking: PickingConTrazado }> = ({ picking }) =
 );
 
 /**
- * Paso 2 del flujo: la bodega en 3D con el carrito recorriendo la ruta. El origen puede ser
- * el sorteo (ruta de conteo: aquí mismo se cuenta, en el orden del recorrido), el pedido de
- * prueba de la Tarea 6 o los pedidos de un día. También da las instrucciones del robot.
+ * Paso 2 del flujo: la bodega en 3D a todo el ancho, con los controles flotando encima (HUD),
+ * y debajo el selector de origen y la tabla del recorrido sincronizada con la animación. En la
+ * ruta de conteo de un sorteo, aquí mismo se cuenta, en el orden del recorrido.
+ *
+ * Sincronía: el reloj (utils/reloj.ts) es la única fuente de verdad del tiempo. La escena lo
+ * avanza en cada cuadro y calcula la parada activa; la página solo se vuelve a dibujar cuando
+ * esa parada cambia. La barra de tiempo es lo único que escucha el reloj.
  */
 export const Recorrido: React.FC = () => {
   const [parametros, setParametros] = useSearchParams();
@@ -128,7 +132,8 @@ export const Recorrido: React.FC = () => {
   const [vista, setVista] = useState<VistaMapa>('arauca');
   const [modoColor, setModoColor] = useState<ModoColor>('abc');
   const [modoCamara, setModoCamara] = useState<ModoCamara>('isometrica');
-  const [seleccion, setSeleccion] = useState<number | 'todos'>(1);
+  // Por defecto se reproducen todos los recorridos seguidos; el selector aísla uno.
+  const [seleccion, setSeleccion] = useState<number | 'todos'>('todos');
 
   // La maqueta solo tiene las 11 referencias nuevas: allí solo existe su propio recorrido.
   const maquetaSinOrigen = vista === 'maqueta' && origen !== 'prueba';
@@ -144,28 +149,59 @@ export const Recorrido: React.FC = () => {
   );
   const resumen = useApi(() => (origen === 'lote' ? api.obtenerResumen() : Promise.resolve(null)), [origen]);
 
-  // El tiempo vive en una referencia que la escena avanza en cada cuadro; el estado de React
-  // solo se refresca ~10 veces por segundo para los controles y el panel.
-  const reproduccion = useRef<Reproduccion>({ t: 0, reproduciendo: false, velocidad: 1 });
-  const [tiempo, setTiempo] = useState(0);
+  const [reloj] = useState(() => new Reloj());
   const [reproduciendo, setReproduciendo] = useState(false);
   const [velocidad, setVelocidad] = useState(1);
   const [webgl] = useState(soportaWebGL);
+  const [resaltada, setResaltada] = useState<string | null>(null);
+  const contenedorMapa = useRef<HTMLDivElement>(null);
+  const [pantallaCompleta, setPantallaCompleta] = useState(false);
 
-  const linea = useMemo(() => (datos ? construirLinea(datos.picking.recorridos, seleccion) : null), [datos, seleccion]);
-  const estado = linea ? estadoEnTiempo(linea, tiempo) : null;
-  const { visitadas, pendientes } = useMemo(
-    () => (linea ? ubicacionesPorEstado(linea, tiempo) : { visitadas: new Set<string>(), pendientes: new Set<string>() }),
-    [linea, tiempo],
-  );
-  const filasConteo = datos && origen === 'sorteo' ? filasEnOrdenDeRecorrido(datos.picking) : [];
+  const picking = datos && !maquetaSinOrigen ? datos.picking : null;
+  const linea = useMemo(() => (picking ? construirLinea(picking.recorridos, seleccion) : null), [picking, seleccion]);
+  const paradas = useMemo(() => (linea ? paradasDeLinea(linea) : []), [linea]);
+  const indicePorParada = useMemo(() => new Map(paradas.map((parada, indice) => [claveParada(parada), indice])), [paradas]);
+  const grupos = useMemo(() => (picking ? gruposDelRecorrido(picking) : []), [picking]);
+  const filas = useMemo(() => grupos.flatMap((grupo) => grupo.filas), [grupos]);
+  const filasPorParada = useMemo(() => {
+    const mapa = new Map<string, FilaRecorrido[]>();
+    for (const fila of filas) mapa.set(fila.clave_parada, [...(mapa.get(fila.clave_parada) ?? []), fila]);
+    return mapa;
+  }, [filas]);
+  // Parada activa: la avisa la escena (o un salto de la barra o de la tabla) y se guarda junto con
+  // la línea a la que pertenece. Si la línea cambió (otro origen o recorrido), se recalcula con el
+  // último tiempo publicado del reloj, sin esperar al siguiente cuadro.
+  const [activaGuardada, setActivaGuardada] = useState<{ paradas: ParadaLinea[]; activa: ParadaActiva } | null>(null);
+  const activa =
+    activaGuardada && activaGuardada.paradas === paradas ? activaGuardada.activa : paradaActivaEnTiempo(paradas, reloj.leerPublicado());
+  const { visitadas, pendientes } = useMemo(() => ubicacionesPorEstado(paradas, activa), [paradas, activa]);
+  const resaltadas = useMemo(() => (resaltada ? new Set([resaltada]) : SIN_RESALTAR), [resaltada]);
 
-  const irA = (t: number) => {
-    reproduccion.current.t = t;
-    setTiempo(t);
+  // Conteo en línea: solo las filas con SKU del sorteo.
+  const filasContables = origen === 'sorteo' ? filas.filter((fila): fila is FilaRecorrido & { sku: number } => fila.sku !== null) : [];
+  const alGuardarConteo = async () => {
+    await Promise.all([listaSorteo.recargar(), progreso.recargar()]);
+  };
+  const conteo = useConteoSorteo(listaSorteo.datos, filasContables, alGuardarConteo);
+
+  /** Guarda la parada activa solo si de verdad cambió (la escena la avisa desde useFrame). */
+  const guardarActiva = (nueva: ParadaActiva, paradasLinea = paradas) =>
+    setActivaGuardada((previa) =>
+      previa && previa.paradas === paradasLinea && mismaParadaActiva(previa.activa, nueva) ? previa : { paradas: paradasLinea, activa: nueva },
+    );
+
+  useEffect(() => {
+    const alCambiar = () => setPantallaCompleta(document.fullscreenElement !== null && document.fullscreenElement === contenedorMapa.current);
+    document.addEventListener('fullscreenchange', alCambiar);
+    return () => document.removeEventListener('fullscreenchange', alCambiar);
+  }, []);
+
+  const irA = (t: number, paradasLinea = paradas) => {
+    reloj.irA(t);
+    guardarActiva(paradaActivaEnTiempo(paradasLinea, t), paradasLinea);
   };
   const pausar = () => {
-    reproduccion.current.reproduciendo = false;
+    reloj.pausar();
     setReproduciendo(false);
   };
   const reiniciarLinea = () => {
@@ -174,14 +210,14 @@ export const Recorrido: React.FC = () => {
   };
   const alternarReproduccion = () => {
     if (!linea) return;
-    if (reproduccion.current.reproduciendo) return pausar();
-    if (reproduccion.current.t >= linea.duracion) irA(0);
-    reproduccion.current.reproduciendo = true;
+    if (reloj.reproduciendo) return pausar();
+    if (reloj.t >= linea.duracion) irA(0);
+    reloj.reproducir();
     setReproduciendo(true);
   };
   const cambiarVista = (nueva: VistaMapa) => {
     setVista(nueva);
-    setSeleccion(1);
+    setSeleccion('todos');
     reiniciarLinea();
   };
   /** Cambia el origen (o su sorteo o fecha) en la URL y empieza la animación de cero. */
@@ -190,7 +226,7 @@ export const Recorrido: React.FC = () => {
     if (nuevo === 'sorteo') consultaNueva.sorteo = String(extra.sorteo ?? sorteo ?? ultimoSorteo ?? '');
     if (nuevo === 'lote' && (extra.fecha ?? fecha)) consultaNueva.fecha = (extra.fecha ?? fecha) as string;
     setParametros(consultaNueva);
-    setSeleccion(1);
+    setSeleccion('todos');
     reiniciarLinea();
   };
   const elegirRecorrido = (nueva: number | 'todos') => {
@@ -198,29 +234,59 @@ export const Recorrido: React.FC = () => {
     reiniciarLinea();
   };
   const cambiarVelocidad = (nueva: number) => {
-    reproduccion.current.velocidad = nueva;
+    reloj.cambiarVelocidad(nueva);
     setVelocidad(nueva);
+  };
+
+  /** Clic en una fila: la animación salta a la llegada del carrito a esa parada, se pausa y el foco va a "contada". */
+  const elegirFila = (fila: FilaRecorrido) => {
+    if (!picking) return;
+    pausar();
+    let paradasLinea = paradas;
+    // Si la línea tiene aislado otro recorrido, se aísla el de la fila.
+    if (!indicePorParada.has(fila.clave_parada)) {
+      paradasLinea = paradasDeLinea(construirLinea(picking.recorridos, fila.recorrido));
+      setSeleccion(fila.recorrido);
+    }
+    const parada = paradasLinea.find((p) => claveParada(p) === fila.clave_parada);
+    if (parada) irA(parada.t_inicio, paradasLinea);
+    if (fila.sku !== null && origen === 'sorteo') conteo.enfocar(fila.sku);
+  };
+  /** Clic en una celda del 3D: se selecciona su fila. */
+  const elegirCelda = (codigo: string) => {
+    const fila = filas.find((f) => f.codigo_ubicacion === codigo);
+    if (fila) elegirFila(fila);
+  };
+
+  const alternarPantallaCompleta = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else contenedorMapa.current?.requestFullscreen?.();
   };
 
   if (esperandoProgreso) return <Cargando texto="Cargando..." />;
 
-  const paleta = modoColor === 'abc' ? COLORES_ABC : COLORES_CATEGORIA;
-  const recorridoInstrucciones = seleccion === 'todos' ? estado?.recorrido ?? 1 : seleccion;
-  const eventoActual = linea && estado ? linea.eventos[estado.indice] : null;
-  const paradaActual = eventoActual?.tipo === 'parada' ? `${eventoActual.recorrido}-${eventoActual.orden}` : null;
-
   const sorteoCompleto = listaSorteo.datos !== null && listaSorteo.datos.pendientes === 0;
-  const contadasSorteo = listaSorteo.datos ? listaSorteo.datos.tamano - listaSorteo.datos.pendientes : 0;
-  const alGuardarConteo = async () => {
-    await Promise.all([listaSorteo.recargar(), progreso.recargar()]);
-  };
-  const panelConteo =
-    origen === 'sorteo' && listaSorteo.datos && filasConteo.length > 0 ? (
-      <PanelConteo sorteo={listaSorteo.datos} filas={filasConteo} paradaActual={paradaActual} alGuardar={alGuardarConteo} />
-    ) : undefined;
+  const resumenOrigen = picking ? textoOrigen(picking, vista, origen, filas.filter((f) => f.sku !== null).length, sorteo, fecha) : null;
+  const recorridos = picking?.recorridos.map((r) => r.recorrido) ?? [];
+  const conteoActivo = origen === 'sorteo' && listaSorteo.datos && filasContables.length > 0 ? conteo : null;
 
-  const etiquetaOrigen = (valor: OrigenPicking) =>
-    valor === 'sorteo' ? `Sorteo ${sorteo ?? ultimoSorteo ?? ''}`.trim() : valor === 'prueba' ? 'Pedido de prueba (Tarea 6)' : 'Pedidos del día';
+  const avisoMaqueta = (
+    <div className="flex items-start gap-2 p-5 border border-amber-400 bg-amber-50 text-amber-900 text-sm max-w-xl">
+      <AlertTriangle className="w-5 h-5 shrink-0" />
+      <span>
+        La maqueta del robot solo tiene las 11 referencias nuevas, así que no puede recorrer {origen === 'sorteo' ? 'el sorteo' : 'los pedidos del día'}.
+        Cambia a <strong>Bodega Arauca</strong> para ver esta ruta, o elige <strong>Pedido de prueba (Tarea 6)</strong> para ver el recorrido de la
+        maqueta.
+      </span>
+    </div>
+  );
+  const estadoCarga = maquetaSinOrigen ? (
+    avisoMaqueta
+  ) : cargando && !datos ? (
+    <Cargando texto="Cargando el mapa..." />
+  ) : error ? (
+    <ErrorCarga mensaje={error} onReintentar={recargar} />
+  ) : null;
 
   return (
     <div className="space-y-6">
@@ -229,192 +295,125 @@ export const Recorrido: React.FC = () => {
         seccion="PASO 2 · RUTA DEL CARRITO"
         descripcion="El carrito va a las ubicaciones del sorteo y aquí mismo se cuenta, en el orden del recorrido. Usa el mismo algoritmo de la Tarea 6: máximo 3 ubicaciones por recorrido, exacto hasta 12 paradas y heurística si son más. En cada parada se detiene el tiempo de nivel 1 = T, nivel 2 = 3T y ambos niveles = 4T."
         icono={Route}
-        acciones={
-          <div className="flex" role="group" aria-label="Vista del mapa">
-            {VISTAS.map((opcion) => (
-              <button key={opcion.valor} type="button" onClick={() => cambiarVista(opcion.valor)} aria-pressed={vista === opcion.valor} className={claseSegmento(vista === opcion.valor)}>
-                {opcion.etiqueta}
-              </button>
-            ))}
-          </div>
-        }
       />
 
-      {/* Origen de las ubicaciones a visitar */}
-      <div className="flex flex-wrap items-end gap-3 p-4 bg-slate-50 border border-slate-200">
-        <div className="flex flex-col gap-1.5">
-          <span className="font-mono text-[11px] tracking-[0.1em] text-slate-500">QUÉ RECORRE EL CARRITO</span>
-          <div className="flex flex-wrap" role="group" aria-label="Origen del recorrido">
-            {ORIGENES.filter((valor) => valor !== 'sorteo' || ultimoSorteo).map((valor) => (
-              <button key={valor} type="button" onClick={() => cambiarOrigen(valor)} aria-pressed={origen === valor} className={claseSegmento(origen === valor)}>
-                {etiquetaOrigen(valor)}
-              </button>
-            ))}
-          </div>
-        </div>
-        {origen === 'sorteo' && progreso.datos && progreso.datos.sorteos.length > 1 && (
-          <label className="flex flex-col gap-1.5 text-xs">
-            <span className="font-mono text-[11px] tracking-[0.1em] text-slate-500">SORTEO</span>
-            <select
-              value={sorteo ?? ''}
-              onChange={(e) => cambiarOrigen('sorteo', { sorteo: Number(e.target.value) })}
-              className="h-10 px-2 border border-tinta bg-white font-mono text-sm"
-            >
-              {[...progreso.datos.sorteos].reverse().map((s) => (
-                <option key={s.numero} value={s.numero}>
-                  {s.numero} · {s.registrados}/{s.tamano} contadas
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {origen === 'lote' && (
-          <div className="flex items-end gap-3">
-            <label className="flex flex-col gap-1.5 text-xs">
-              <span className="font-mono text-[11px] tracking-[0.1em] text-slate-500">FECHA</span>
-              <select
-                value={fecha ?? datos?.picking.fecha ?? ''}
-                onChange={(e) => cambiarOrigen('lote', { fecha: e.target.value })}
-                className="h-10 px-2 border border-tinta bg-white font-mono text-sm"
-              >
-                {(resumen.datos?.fechas_disponibles ?? (datos?.picking.fecha ? [datos.picking.fecha] : [])).map((opcion) => (
-                  <option key={opcion} value={opcion}>
-                    {opcion}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Link
-              to={`/pedidos?fecha=${fecha ?? datos?.picking.fecha ?? ''}`}
-              className="flex items-center gap-1 h-10 text-xs font-bold text-indigo-600 hover:underline"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              Ver los pedidos de ese día
-            </Link>
-          </div>
-        )}
-        {datos && !maquetaSinOrigen && (
-          <span className="ml-auto flex items-center gap-1.5 h-10 px-3 bg-tinta text-papel font-mono text-xs" title="El sistema elige el método según el número de paradas">
-            <Cpu className="w-3.5 h-3.5 text-senal" />
-            método: {NOMBRE_METODO[datos.picking.metodo] ?? datos.picking.metodo} · {datos.picking.totales.ubicaciones} paradas ·{' '}
-            {datos.picking.totales.recorridos} recorridos
-          </span>
-        )}
-      </div>
+      {webgl ? (
+        <div
+          ref={contenedorMapa}
+          className={`relative overflow-hidden border border-slate-200 bg-papel ${pantallaCompleta ? 'h-screen' : 'h-[min(72vh,760px)] min-h-[480px]'}`}
+        >
+          {estadoCarga ? (
+            <div className="absolute inset-0 flex items-center justify-center p-6">{estadoCarga}</div>
+          ) : (
+            datos &&
+            linea && (
+              <Escena3D
+                layout={datos.layout}
+                linea={linea}
+                reloj={reloj}
+                paradas={paradas}
+                alCambiarParada={guardarActiva}
+                alTerminar={() => setReproduciendo(false)}
+                modoColor={modoColor}
+                modoCamara={modoCamara}
+                visitadas={visitadas}
+                pendientes={pendientes}
+                resaltadas={resaltadas}
+                alElegirCelda={elegirCelda}
+              />
+            )
+          )}
 
-      {origen === 'lote' && datos?.picking.pedidos !== undefined && (
+          {/* HUD superior: origen a la izquierda, controles a la derecha */}
+          <div className="absolute top-3 inset-x-3 flex flex-wrap items-start justify-between gap-2 pointer-events-none [&>*]:pointer-events-auto">
+            {resumenOrigen ? <ResumenOrigen texto={resumenOrigen} /> : <span />}
+            <ControlesMapa
+              modoCamara={modoCamara}
+              alCambiarCamara={setModoCamara}
+              vista={vista}
+              alCambiarVista={cambiarVista}
+              pantallaCompleta={pantallaCompleta}
+              alAlternarPantallaCompleta={alternarPantallaCompleta}
+            />
+          </div>
+
+          {/* Solo en pantalla completa: la tabla no se ve, así que va la parada actual y la siguiente */}
+          {pantallaCompleta && linea && !estadoCarga && (
+            <div className="absolute top-16 right-3">
+              <TarjetaParada paradas={paradas} activa={activa} filasPorParada={filasPorParada} />
+            </div>
+          )}
+
+          {/* HUD inferior: leyenda y línea de tiempo */}
+          {linea && !estadoCarga && (
+            <div className="absolute bottom-0 inset-x-0 flex flex-col pointer-events-none [&>*]:pointer-events-auto">
+              <div className="self-start m-3">
+                <LeyendaMapa modoColor={modoColor} alCambiar={setModoColor} />
+              </div>
+              <LineaTiempo
+                reloj={reloj}
+                linea={linea}
+                reproduciendo={reproduciendo}
+                velocidad={velocidad}
+                recorridos={recorridos}
+                seleccion={seleccion}
+                alReproducir={alternarReproduccion}
+                alReiniciar={reiniciarLinea}
+                alCambiarVelocidad={cambiarVelocidad}
+                alBuscar={(t) => irA(t)}
+                alElegirRecorrido={elegirRecorrido}
+              />
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {resumenOrigen && <ResumenOrigen texto={resumenOrigen} />}
+            <SelectorVista vista={vista} alCambiar={cambiarVista} />
+          </div>
+          {estadoCarga ?? (
+            <div className="flex items-start gap-2 p-4 border border-amber-400 bg-amber-50 text-amber-900 text-sm">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
+              <span>
+                Este navegador no puede dibujar gráficos 3D (WebGL desactivado o no disponible), así que el mapa no se muestra. Los recorridos
+                están en las tablas de abajo{conteoActivo ? ' y el conteo funciona igual' : ''}. Prueba con Chrome o Edge actualizados.
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      <SelectorOrigen
+        origen={origen}
+        sorteoActivo={sorteo}
+        sorteos={progreso.datos?.sorteos ?? []}
+        periodos={progreso.datos?.periodos ?? []}
+        fechas={resumen.datos?.fechas_disponibles ?? (picking?.fecha ? [picking.fecha] : [])}
+        fecha={fecha ?? picking?.fecha}
+        alCambiar={cambiarOrigen}
+      />
+
+      {origen === 'lote' && picking?.pedidos !== undefined && (
         <p className="text-xs text-slate-600 -mt-3">
-          {datos.picking.pedidos} pedidos de Arauca del {datos.picking.fecha}, consolidados por referencia.
-          {datos.picking.sin_ubicacion && datos.picking.sin_ubicacion.length > 0 && (
-            <span className="text-amber-700"> Sin ubicación en el maestro: {datos.picking.sin_ubicacion.join(', ')}.</span>
+          {picking.pedidos} pedidos de Arauca del {picking.fecha}, consolidados por referencia.
+          {picking.sin_ubicacion && picking.sin_ubicacion.length > 0 && (
+            <span className="text-amber-700"> Sin ubicación en el maestro: {picking.sin_ubicacion.join(', ')}.</span>
           )}
         </p>
       )}
 
-      {maquetaSinOrigen ? (
-        <div className="flex items-start gap-2 p-5 border border-amber-400 bg-amber-50 text-amber-900 text-sm">
-          <AlertTriangle className="w-5 h-5 shrink-0" />
-          <span>
-            La maqueta del robot solo tiene las 11 referencias nuevas, así que no puede recorrer {origen === 'sorteo' ? 'el sorteo' : 'los pedidos del día'}.
-            Cambia a <strong>Bodega Arauca</strong> para ver esta ruta, o elige <strong>Pedido de prueba (Tarea 6)</strong> para ver el recorrido de la
-            maqueta.
-          </span>
-        </div>
-      ) : cargando && !datos ? (
-        <Cargando texto="Cargando el mapa..." />
-      ) : error ? (
-        <ErrorCarga mensaje={error} onReintentar={recargar} />
-      ) : datos && linea ? (
+      {picking && linea && (
         <>
-          {!webgl ? (
-            <div className="space-y-4">
-              <div className="flex items-start gap-2 p-4 border border-amber-400 bg-amber-50 text-amber-900 text-sm">
-                <AlertTriangle className="w-5 h-5 shrink-0" />
-                <span>
-                  Este navegador no puede dibujar gráficos 3D (WebGL desactivado o no disponible), así que el mapa no se muestra. Los recorridos
-                  están en la tabla de abajo{panelConteo ? ' y el conteo funciona igual' : ''}. Prueba con Chrome o Edge actualizados.
-                </span>
-              </div>
-              {panelConteo && <div className="max-w-xl border border-slate-200 bg-slate-50">{panelConteo}</div>}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_380px] gap-4">
-              <div className="flex flex-col min-w-0">
-                <div className="relative h-[560px] border border-slate-200 bg-papel">
-                  <Escena3D
-                    layout={datos.layout}
-                    linea={linea}
-                    reproduccion={reproduccion}
-                    alAvanzar={setTiempo}
-                    alTerminar={() => setReproduciendo(false)}
-                    modoColor={modoColor}
-                    modoCamara={modoCamara}
-                    visitadas={visitadas}
-                    pendientes={pendientes}
-                  />
-                  {/* Vistas de cámara */}
-                  <div className="absolute top-3 left-3 flex" role="group" aria-label="Vista de cámara">
-                    {CAMARAS.map(({ valor, etiqueta, icono: Icono }) => (
-                      <button key={valor} type="button" onClick={() => setModoCamara(valor)} aria-pressed={modoCamara === valor} className={`${claseSegmento(modoCamara === valor)} flex items-center gap-1.5`}>
-                        <Icono className="w-3.5 h-3.5" />
-                        {etiqueta}
-                      </button>
-                    ))}
-                  </div>
-                  {/* Leyenda y color */}
-                  <div className="absolute bottom-3 left-3 bg-slate-50/95 border border-slate-200 p-2.5 flex flex-col gap-2 text-xs">
-                    <div className="flex" role="group" aria-label="Colorear por">
-                      <button type="button" onClick={() => setModoColor('abc')} aria-pressed={modoColor === 'abc'} className={`${claseSegmento(modoColor === 'abc')} !h-8`}>
-                        Clase ABC
-                      </button>
-                      <button type="button" onClick={() => setModoColor('categoria')} aria-pressed={modoColor === 'categoria'} className={`${claseSegmento(modoColor === 'categoria')} !h-8`}>
-                        Categoría
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 max-w-[340px]">
-                      {Object.entries(paleta).map(([nombre, color]) => (
-                        <span key={nombre} className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 border border-tinta" style={{ background: color }} />
-                          {modoColor === 'abc' ? `Clase ${nombre}` : nombre}
-                        </span>
-                      ))}
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 border border-tinta bg-[#facc15]" />
-                        Por visitar
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 border border-tinta bg-tinta" />
-                        Ya visitada
-                      </span>
-                    </div>
-                  </div>
-                  <div className="absolute top-3 right-3 font-mono text-[11px] bg-tinta text-papel px-2 py-1">{datos.layout.nombre.toUpperCase()}</div>
-                </div>
-                <LineaTiempo
-                  duracion={linea.duracion}
-                  tiempo={tiempo}
-                  reproduciendo={reproduciendo}
-                  velocidad={velocidad}
-                  recorridos={datos.picking.recorridos.map((r) => r.recorrido)}
-                  seleccion={seleccion}
-                  alReproducir={alternarReproduccion}
-                  alReiniciar={reiniciarLinea}
-                  alCambiarVelocidad={cambiarVelocidad}
-                  alBuscar={irA}
-                  alElegirRecorrido={elegirRecorrido}
-                />
-              </div>
-              <PanelRecorrido
-                consulta={consulta}
-                linea={linea}
-                estado={estado}
-                tiempo={tiempo}
-                recorridoInstrucciones={recorridoInstrucciones}
-                conteo={panelConteo}
-                avanceConteo={listaSorteo.datos ? `${contadasSorteo}/${listaSorteo.datos.tamano}` : undefined}
-              />
-            </div>
-          )}
+          <TablaRecorrido
+            grupos={grupos}
+            indicePorParada={indicePorParada}
+            activa={activa}
+            conteo={conteoActivo}
+            numeroSorteo={sorteo}
+            alElegir={elegirFila}
+            alPasar={setResaltada}
+          />
 
           {origen === 'sorteo' && sorteo && sorteoCompleto && (
             <BotonSiguiente
@@ -426,20 +425,22 @@ export const Recorrido: React.FC = () => {
           )}
 
           <div className="space-y-3">
-            <h3 className="font-bold text-base">Trayectos · {datos.layout.nombre}</h3>
-            <TablaTrayectos picking={datos.picking} />
+            <h3 className="font-bold text-base">Trayectos · {datos?.layout.nombre}</h3>
+            <TablaTrayectos picking={picking} />
             <div className="flex items-start gap-2 p-4 bg-slate-50 border border-slate-200 text-xs leading-relaxed text-slate-600">
               <Info className="w-4 h-4 shrink-0 mt-0.5" />
               <span>
-                Supuestos (el caso no los da): velocidad {datos.picking.totales.velocidad_m_s ?? 1} m/s y recogida en nivel 1 de{' '}
-                {datos.picking.totales.tiempo_recogida_nivel_1_s ?? 20} s (T). El nivel 2 tarda 3T y ambos niveles 4T. En la ruta de conteo se usa
-                el mismo tiempo por parada, porque el caso no define un tiempo de conteo. El tiempo en cada parada no cambia cuál es la mejor
-                ruta, solo suma al total.
+                Supuestos (el caso no los da): velocidad {picking.totales.velocidad_m_s ?? 1} m/s y recogida en nivel 1 de{' '}
+                {picking.totales.tiempo_recogida_nivel_1_s ?? 20} s (T). El nivel 2 tarda 3T y ambos niveles 4T. En la ruta de conteo se usa el
+                mismo tiempo por parada, porque el caso no define un tiempo de conteo. El tiempo en cada parada no cambia cuál es la mejor ruta,
+                solo suma al total.
               </span>
             </div>
           </div>
+
+          <InstruccionesArduino consulta={consulta} recorridos={recorridos} recorridoInicial={seleccion === 'todos' ? recorridos[0] ?? 1 : seleccion} />
         </>
-      ) : null}
+      )}
     </div>
   );
 };

@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Html, Line, OrbitControls } from '@react-three/drei';
+import { Edges, Html, Line, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import type { CeldaLayout, LayoutBodega } from '../../types/inventario';
-import { estadoEnTiempo, type LineaDeTiempo } from '../../utils/animacion';
+import { estadoEnTiempo, mismaParadaActiva, paradaActivaEnTiempo, type LineaDeTiempo, type ParadaActiva, type ParadaLinea } from '../../utils/animacion';
+import type { Reloj } from '../../utils/reloj';
 import { COLORES_ABC, COLORES_CATEGORIA } from './constantes';
 
 // La escena solo dibuja lo que llega del backend (layout y trazado): no sabe medidas de la bodega.
@@ -14,28 +15,28 @@ import { COLORES_ABC, COLORES_CATEGORIA } from './constantes';
 export type ModoColor = 'abc' | 'categoria';
 export type ModoCamara = 'planta' | 'isometrica' | 'carrito';
 
-/** Estado de reproducción compartido entre la escena (useFrame) y los controles (React). */
-export interface Reproduccion {
-  t: number;
-  reproduciendo: boolean;
-  velocidad: number;
-}
-
 const COLOR_PENDIENTE = '#facc15';
 const COLOR_VISITADA = '#17181a';
 const COLOR_SIN_DATO = '#d9d4c7';
+const COLOR_RESALTADA = '#ff6b2c';
 
 interface EscenaProps {
   layout: LayoutBodega;
   linea: LineaDeTiempo;
-  reproduccion: React.MutableRefObject<Reproduccion>;
-  /** Se llama ~10 veces por segundo con el tiempo actual, para refrescar los controles. */
-  alAvanzar: (t: number) => void;
+  /** Reloj compartido: la escena lo avanza en cada cuadro. */
+  reloj: Reloj;
+  paradas: ParadaLinea[];
+  /** Se llama solo cuando cambia la parada activa (no en cada cuadro). */
+  alCambiarParada: (activa: ParadaActiva) => void;
   alTerminar: () => void;
   modoColor: ModoColor;
   modoCamara: ModoCamara;
   visitadas: Set<string>;
   pendientes: Set<string>;
+  /** Celdas resaltadas desde la tabla (cursor sobre una fila). */
+  resaltadas: Set<string>;
+  /** Clic en una celda: se selecciona su fila en la tabla. */
+  alElegirCelda: (codigo: string) => void;
 }
 
 /** Convierte un punto del backend a three.js, centrado en la bodega. */
@@ -130,9 +131,11 @@ interface EstanteProps {
   aThree: ReturnType<typeof crearConversor>;
   colorDe: (celda: CeldaLayout) => string;
   alPasar: (celda: CeldaLayout | null) => void;
+  resaltadas: Set<string>;
+  alElegirCelda: (codigo: string) => void;
 }
 
-const Estante3D: React.FC<EstanteProps> = ({ estante, layout, aThree, colorDe, alPasar }) => {
+const Estante3D: React.FC<EstanteProps> = ({ estante, layout, aThree, colorDe, alPasar, resaltadas, alElegirCelda }) => {
   const { medidas } = layout;
   const largo = medidas.largo_celda * 0.94;
   const fondo = medidas.fondo_rack * 0.9;
@@ -172,41 +175,56 @@ const Estante3D: React.FC<EstanteProps> = ({ estante, layout, aThree, colorDe, a
               alPasar(celda);
             }}
             onPointerOut={() => alPasar(null)}
+            onClick={(e) => {
+              e.stopPropagation();
+              alElegirCelda(celda.codigo_ubicacion);
+            }}
           >
             <boxGeometry args={[ancho * 0.8, medidas.alto_nivel * 0.62, profundidad * 0.8]} />
             <meshStandardMaterial color={colorDe(celda)} />
+            {resaltadas.has(celda.codigo_ubicacion) && <Edges scale={1.12} color={COLOR_RESALTADA} lineWidth={3} />}
           </mesh>
         ))}
     </group>
   );
 };
 
-/** El carrito: se mueve en cada cuadro según el tiempo transcurrido (reloj de three). */
+/**
+ * El carrito: se mueve en cada cuadro según el reloj. También calcula la parada activa en cada
+ * cuadro, pero solo avisa a React cuando cambia.
+ */
 const Carrito: React.FC<{
   linea: LineaDeTiempo;
-  reproduccion: React.MutableRefObject<Reproduccion>;
+  reloj: Reloj;
+  paradas: ParadaLinea[];
   aThree: ReturnType<typeof crearConversor>;
-  alAvanzar: (t: number) => void;
+  alCambiarParada: (activa: ParadaActiva) => void;
   alTerminar: () => void;
   seguir: boolean;
   controles: React.RefObject<OrbitControlsImpl | null>;
-}> = ({ linea, reproduccion, aThree, alAvanzar, alTerminar, seguir, controles }) => {
+}> = ({ linea, reloj, paradas, aThree, alCambiarParada, alTerminar, seguir, controles }) => {
   const grupo = useRef<THREE.Group>(null);
   const acumulado = useRef(0);
+  const ultimaActiva = useRef<ParadaActiva | null>(null);
   const camara = useThree((estado) => estado.camera);
 
   useFrame((_, delta) => {
-    const r = reproduccion.current;
-    if (r.reproduciendo) {
-      // Intencional: `reproduccion` es el reloj compartido (una referencia, no estado de React).
-      // La escena lo avanza en cada cuadro y los controles lo leen; así no se re-renderiza 60 veces por segundo.
-      // oxlint-disable-next-line react/immutability
-      r.t = Math.min(r.t + delta * r.velocidad, linea.duracion);
-      if (r.t >= linea.duracion) {
-        r.reproduciendo = false;
-        alTerminar();
-      }
+    // `reloj` es el reloj compartido (un objeto, no estado de React): la escena lo avanza en cada
+    // cuadro y solo publica el tiempo ~10 veces por segundo, así la página no se re-renderiza 60 veces.
+    const r = reloj;
+    if (r.avanzar(delta, linea.duracion)) alTerminar();
+    const activa = paradaActivaEnTiempo(paradas, r.t);
+    if (!ultimaActiva.current || !mismaParadaActiva(activa, ultimaActiva.current)) {
+      ultimaActiva.current = activa;
+      alCambiarParada(activa);
     }
+
+    acumulado.current += delta;
+    if (acumulado.current >= 0.1) {
+      acumulado.current = 0;
+      r.publicar();
+    }
+
     const estado = estadoEnTiempo(linea, r.t);
     if (!estado || !grupo.current) return;
     const [x, , z] = aThree(estado.x, estado.y);
@@ -224,12 +242,6 @@ const Carrito: React.FC<{
       const mira = new THREE.Vector3(x, 0.8, z).addScaledVector(adelante, 3);
       controles.current?.target.lerp(mira, Math.min(1, delta * 4));
       camara.lookAt(controles.current?.target ?? mira);
-    }
-
-    acumulado.current += delta;
-    if (acumulado.current >= 0.1) {
-      acumulado.current = 0;
-      alAvanzar(r.t);
     }
   });
 
@@ -271,7 +283,20 @@ const Camaras: React.FC<{ layout: LayoutBodega; modo: ModoCamara; controles: Rea
 // Escena completa
 // ---------------------------------------------------------------------------
 
-export const Escena3D: React.FC<EscenaProps> = ({ layout, linea, reproduccion, alAvanzar, alTerminar, modoColor, modoCamara, visitadas, pendientes }) => {
+export const Escena3D: React.FC<EscenaProps> = ({
+  layout,
+  linea,
+  reloj,
+  paradas,
+  alCambiarParada,
+  alTerminar,
+  modoColor,
+  modoCamara,
+  visitadas,
+  pendientes,
+  resaltadas,
+  alElegirCelda,
+}) => {
   const aThree = useMemo(() => crearConversor(layout), [layout]);
   const estantes = useMemo(() => agruparEstantes(layout.celdas), [layout]);
   const controles = useRef<OrbitControlsImpl | null>(null);
@@ -302,14 +327,24 @@ export const Escena3D: React.FC<EscenaProps> = ({ layout, linea, reproduccion, a
 
       <Piso layout={layout} aThree={aThree} />
       {estantes.map((estante) => (
-        <Estante3D key={estante.clave} estante={estante} layout={layout} aThree={aThree} colorDe={colorDe} alPasar={setCeldaSenalada} />
+        <Estante3D
+          key={estante.clave}
+          estante={estante}
+          layout={layout}
+          aThree={aThree}
+          colorDe={colorDe}
+          alPasar={setCeldaSenalada}
+          resaltadas={resaltadas}
+          alElegirCelda={alElegirCelda}
+        />
       ))}
       {puntosRuta.length > 1 && <Line points={puntosRuta} color="#17181a" lineWidth={2} dashed dashSize={0.4} gapSize={0.25} />}
       <Carrito
         linea={linea}
-        reproduccion={reproduccion}
+        reloj={reloj}
+        paradas={paradas}
         aThree={aThree}
-        alAvanzar={alAvanzar}
+        alCambiarParada={alCambiarParada}
         alTerminar={alTerminar}
         seguir={modoCamara === 'carrito'}
         controles={controles}
