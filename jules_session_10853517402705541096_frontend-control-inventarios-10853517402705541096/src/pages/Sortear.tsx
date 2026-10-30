@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ClipboardCheck, CheckCircle2, Clock, ListChecks, User, ChevronLeft, ChevronRight, CalendarRange, Shuffle, PartyPopper, Lock } from 'lucide-react';
-import { DataTable, type Column } from '../components/ui/DataTable';
+import { Check, ClipboardCheck, CheckCircle2, Clock, ListChecks, User, ChevronLeft, ChevronRight, CalendarRange, Shuffle, PartyPopper, Lock } from 'lucide-react';
+import { Tabla, type ColumnaTabla } from '../components/ui/Tabla';
+import { Insignia } from '../components/ui/Insignia';
 import { Modal } from '../components/ui/Modal';
 import { BotonSiguiente } from '../components/ui/BotonSiguiente';
-import { Aviso, BarraConteos, Cargando, ErrorCarga, EtiquetaSku, type MensajeAviso } from '../components/ui/Estados';
+import { Aviso, BarraConteos, Cargando, ErrorCarga, type MensajeAviso } from '../components/ui/Estados';
 import { EncabezadoPagina, CLASE_BOTON_PRINCIPAL, CLASE_BOTON_SECUNDARIO } from '../components/ui/EncabezadoPagina';
 import { useApi } from '../hooks/useApi';
 import { useProgreso } from '../hooks/ProgresoContexto';
@@ -14,6 +15,58 @@ import { formatearFechaHora } from '../utils/formato';
 import type { ReferenciaSorteo } from '../types/inventario';
 
 type Pestana = 'PENDIENTES' | 'CONTADAS' | 'TODAS';
+
+/** Columnas de la lista del sorteo (de solo lectura: aquí no se cuenta). */
+const COLUMNAS: ColumnaTabla<ReferenciaSorteo>[] = [
+  { clave: 'sku', titulo: 'SKU', ancho: '7rem', render: (fila) => <span className="tabla-chip">{fila.sku}</span> },
+  {
+    clave: 'descripcion',
+    titulo: 'Referencia',
+    render: (fila) => (
+      <span className="flex flex-col py-1">
+        <span className="font-semibold">{fila.descripcion}</span>
+        <span className="text-xs opacity-70">{fila.categoria}</span>
+      </span>
+    ),
+  },
+  { clave: 'codigo_ubicacion', titulo: 'Ubicación', render: (fila) => (fila.codigo_ubicacion ? <span className="tabla-chip">{fila.codigo_ubicacion}</span> : '—') },
+  {
+    clave: 'contados',
+    titulo: 'Conteos del año',
+    render: (fila) => <BarraConteos contados={fila.contados} conDiferencia={fila.tiene_diferencia} />,
+  },
+  {
+    clave: 'estado',
+    titulo: 'Estado',
+    render: (fila) => {
+      const registro = fila.registro_sorteo;
+      if (!registro) {
+        return (
+          <Insignia tono="neutro" icono={<Clock className="w-3 h-3" aria-hidden="true" />}>
+            Pendiente
+          </Insignia>
+        );
+      }
+      return (
+        <span className="flex flex-col items-start gap-1 py-1">
+          {registro.diferencia === 0 ? (
+            <Insignia tono="exito" icono={<Check className="w-3 h-3" aria-hidden="true" />}>
+              Contada · cuadra ({registro.cantidad_contada})
+            </Insignia>
+          ) : (
+            <Insignia tono="peligro" icono={<Check className="w-3 h-3" aria-hidden="true" />}>
+              Contada · diferencia {registro.diferencia > 0 ? `+${registro.diferencia}` : registro.diferencia}
+            </Insignia>
+          )}
+          <span className="flex items-center gap-1 text-xs opacity-70">
+            <User className="w-3 h-3" aria-hidden="true" />
+            {registro.responsable} · {registro.fecha}
+          </span>
+        </span>
+      );
+    },
+  },
+];
 
 /**
  * Paso 1 del flujo: el botón "Sortear" elige referencias al azar (ninguna pasa de 5 conteos
@@ -80,60 +133,6 @@ export const Sortear: React.FC = () => {
   const contadas = referencias.filter((fila) => fila.contada_en_sorteo);
   const visibles = pestana === 'PENDIENTES' ? pendientes : pestana === 'CONTADAS' ? contadas : referencias;
   const porcentaje = referencias.length ? Math.round((contadas.length / referencias.length) * 100) : 0;
-
-  const columnas: Column<ReferenciaSorteo>[] = [
-    { key: 'sku', header: 'SKU', render: (fila) => <EtiquetaSku sku={fila.sku} /> },
-    {
-      key: 'descripcion',
-      header: 'Referencia',
-      render: (fila) => (
-        <div>
-          <span className="font-semibold text-slate-800">{fila.descripcion}</span>
-          <div className="text-xs text-slate-500">{fila.categoria}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'codigo_ubicacion',
-      header: 'Ubicación',
-      render: (fila) => <span className="font-mono text-xs font-semibold">{fila.codigo_ubicacion}</span>,
-    },
-    {
-      key: 'contados',
-      header: 'Conteos del año',
-      render: (fila) => <BarraConteos contados={fila.contados} conDiferencia={fila.tiene_diferencia} />,
-    },
-    {
-      key: 'estado',
-      header: 'Estado',
-      render: (fila) => {
-        const registro = fila.registro_sorteo;
-        if (!registro) {
-          return (
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-500">
-              <Clock className="w-3.5 h-3.5" />
-              Pendiente
-            </span>
-          );
-        }
-        return (
-          <span className="flex flex-col text-xs">
-            {registro.diferencia === 0 ? (
-              <span className="font-bold text-tinta">✓ Contada · cuadra ({registro.cantidad_contada})</span>
-            ) : (
-              <span className="font-bold text-rose-600">
-                ✓ Contada · diferencia {registro.diferencia > 0 ? `+${registro.diferencia}` : registro.diferencia}
-              </span>
-            )}
-            <span className="flex items-center gap-1 text-slate-500">
-              <User className="w-3 h-3" />
-              {registro.responsable} · {registro.fecha}
-            </span>
-          </span>
-        );
-      },
-    },
-  ];
 
   const botonPestana = (valor: Pestana, etiqueta: string, cantidad: number, Icono: typeof Clock) => (
     <button
@@ -305,13 +304,15 @@ export const Sortear: React.FC = () => {
           {lista.error ? (
             <ErrorCarga mensaje={lista.error} onReintentar={lista.recargar} />
           ) : (
-            <DataTable
-              columns={columnas}
-              data={visibles}
-              keyExtractor={(fila) => String(fila.sku)}
-              isLoading={lista.cargando}
-              pageSize={15}
-              emptyMessage={pestana === 'PENDIENTES' ? 'No queda nada por contar en este sorteo.' : 'No hay referencias en esta pestaña.'}
+            <Tabla
+              etiqueta={`Referencias del sorteo ${numeroSorteo}`}
+              columnas={COLUMNAS}
+              filas={visibles}
+              claveFila={(fila) => String(fila.sku)}
+              tonoFila={(fila) => (fila.contada_en_sorteo ? 'visitada' : 'normal')}
+              cargando={lista.cargando && !lista.datos}
+              vacio={pestana === 'PENDIENTES' ? 'No queda nada por contar en este sorteo.' : 'No hay referencias en esta pestaña.'}
+              pie={`${visibles.length} de ${referencias.length} referencias · solo lectura: se cuenta en el Paso 2`}
             />
           )}
 
